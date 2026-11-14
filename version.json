@@ -1,6 +1,14 @@
 {
- "version": "1.00",
+ "version": "1.01",
  "notes": [
+  {
+   "v": "1.01",
+   "d": "2026-11-14",
+   "n": [
+    "Morning, afternoon or evening for the start and the end of a sickness",
+    "Sick days are now counted by thirds on the first and last day: Monday evening to Wednesday morning is 1.7 days. Sicknesses logged before count as full days, as they did"
+   ]
+  },
   {
    "v": "1.00",
    "d": "2026-11-14",

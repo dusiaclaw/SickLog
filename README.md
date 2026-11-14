@@ -1,10 +1,10 @@
 # Sick Log
 
-Installable web app (Android and iPhone) to keep a private diary of your sick days: each sickness with first and last sick day, type, symptoms, severity, days off work, doctor visit, medication and notes, plus statistics over the years.
+Installable web app (Android and iPhone) to keep a private diary of your sick days: each sickness with first and last sick day (morning, afternoon or evening), type, symptoms, severity, days off work, doctor visit, medication and notes, plus statistics over the years.
 
 **Privacy:** everything stays in the browser storage of your own device. There is no server and no tracking. The only online request is the app checking its own address for a newer version.
 
-## Features (1.00)
+## Features (1.01)
 - **Log:** "I'm sick" opens a sickness from today, "I'm well again" closes it; earlier sicknesses can be added with their dates.
 - **History:** all episodes by year, with search and type filter.
 - **Statistics:** episodes and sick days per year, per month (seasonality), by type, symptom and severity, days off work, doctor visits, healthy stretches.
