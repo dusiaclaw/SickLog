@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sick Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Sick Log</title>
+<style>
+:root{--bg:#f4f6f8;--surface:#fff;--ink:#141a20;--muted:#5d6670;--line:#dbe0e6;--accent:#1d4fbf;--accent-ink:#fff;--accent-soft:#e2ebfb;--danger:#b42318;--shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.06);--s1:#f2c94c;--s2:#f2994a;--s3:#d64545}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;width:100%;max-width:100%;overflow-x:hidden}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
+button,input,select,textarea{font:inherit;color:inherit}
+#app{max-width:640px;margin:0 auto;min-height:100%;padding:0 16px calc(40px + env(safe-area-inset-bottom))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow);margin-bottom:12px}
+.btn{min-height:46px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:600}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.danger{color:var(--danger)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.5}
+.sub{color:var(--muted);font-size:14px}
+.row{display:flex;gap:10px;align-items:center}
+.row>*{flex:1;min-width:0}
+label.f{display:block;margin-bottom:12px;font-size:13px;color:var(--muted);font-weight:600}
+label.f input,label.f select,label.f textarea{display:block;width:100%;margin-top:4px;min-height:46px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:16px;font-weight:400;color:var(--ink)}
+label.f textarea{min-height:84px;resize:vertical}
+.flabel{font-size:13px;color:var(--muted);font-weight:600;margin:0 0 6px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:22px 0 8px}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:94vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.sheet h3{margin:0 0 12px;font-size:18px}
+.hint{font-size:12px;color:var(--muted);margin:-6px 0 12px}
+.toast{position:fixed;left:50%;bottom:calc(60px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;z-index:70;font-size:14px;max-width:90%}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+.small{min-height:36px;padding:0 10px;font-size:14px;white-space:nowrap}
+#splash{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#2a63d6,#0c2357);display:grid;place-items:center;color:#fff;text-align:center;transition:opacity .25s}
+#splash.out{opacity:0;pointer-events:none}
+.sp-icon{width:96px;height:96px;margin:0 auto;animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}
+.sp-icon svg{width:100%;height:100%;display:block}
+.sp-name{font-size:28px;font-weight:800;letter-spacing:.5px;margin-top:14px;animation:up .4s .15s both}
+.sp-tag{opacity:.8;font-size:14px;animation:up .4s .25s both}
+.sp-ver{opacity:.65;font-size:12px;margin-top:22px;animation:up .4s .35s both;--o:.65}
+@keyframes pop{from{transform:scale(.4) rotate(-14deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes up{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:var(--o,1)}}
+@media (prefers-reduced-motion:reduce){.sp-icon,.sp-name,.sp-tag,.sp-ver{animation:none}}
+.appbar{position:sticky;top:0;z-index:5;margin:0 -16px;padding:calc(8px + env(safe-area-inset-top)) 16px 8px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.ab-icon{width:34px;height:34px;flex:none}.ab-icon svg{width:100%;height:100%;display:block}
+.ab-title{flex:1;display:flex;flex-direction:column;line-height:1.15}.ab-title b{font-size:17px}.ab-title span{font-size:12px;color:var(--muted)}
+.ab-title span.new{color:var(--accent);font-weight:700}
+.burger{width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:none;font-size:22px;color:var(--ink);cursor:pointer}
+.upd-btn{width:40px;height:40px;border:0;background:none;color:var(--accent);cursor:pointer;display:grid;place-items:center;border-radius:10px}
+.pagehead{display:flex;align-items:center;gap:10px;padding:14px 0 10px}.pagehead h1{font-size:22px;margin:0;flex:1}
+.back{width:44px;height:44px;flex:none;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:26px;line-height:1;color:var(--ink);cursor:pointer}
+.setrow{display:flex;align-items:center;gap:14px;width:100%;text-align:left;cursor:pointer;margin-bottom:10px;color:var(--ink)}
+.setrow .si{font-size:24px;width:34px;text-align:center}.setrow .st{flex:1;display:flex;flex-direction:column;min-width:0}.setrow .chev{font-size:24px;color:var(--muted)}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
+.sw{border:2px solid var(--line);border-radius:12px;background:var(--surface);padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--ink);cursor:pointer}
+.sw i{width:36px;height:36px;border-radius:50%;display:block}.sw.on{border-color:var(--accent)}
+.seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}.seg button{flex:1;min-height:44px;border:0;background:none;color:var(--ink);font-weight:600;cursor:pointer}.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:min(84vw,320px);background:var(--bg);padding:calc(14px + env(safe-area-inset-top)) 12px 20px;animation:slin .2s ease-out;overflow:auto}
+@keyframes slin{from{transform:translateX(100%)}to{transform:none}}
+.dr-head{display:flex;gap:10px;align-items:center;padding:4px 6px 16px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.dr-item{display:flex;align-items:center;gap:14px;width:100%;min-height:52px;padding:0 10px;border:0;background:none;border-radius:12px;font-size:16px;font-weight:600;color:var(--ink);text-align:left;cursor:pointer}
+.dr-item:active{background:var(--accent-soft)}.dr-item span{font-size:22px;width:30px;text-align:center}
+.dlg-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:60;display:grid;place-items:center;padding:20px}
+.dlg{background:var(--surface);color:var(--ink);border-radius:18px;padding:18px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.dlg p{margin:0 0 12px;white-space:pre-wrap;font-size:15px}
+.dlg input{width:100%;min-height:46px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:16px;margin-bottom:14px}
+.dlg .acts{display:flex;gap:10px;flex-wrap:wrap}.dlg .acts .btn{flex:1;min-width:90px}
+.homebtn{display:flex;align-items:center;gap:16px;width:100%;text-align:left;border-radius:20px;padding:22px 18px;margin-bottom:14px;cursor:pointer;color:var(--ink);background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)}
+.homebtn .hi{font-size:34px;width:48px;text-align:center;flex:none}.homebtn .ht{flex:1;min-width:0;display:flex;flex-direction:column}.homebtn b{font-size:19px}.homebtn .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.homebtn.main{background:var(--accent);color:var(--accent-ink);border-color:transparent;padding:30px 18px}.homebtn.main .sub{color:inherit;opacity:.85}
+.catrow{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.catrow input.nm{flex:1;min-width:0;min-height:46px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:16px}
+.catrow .btn .ic{margin:0}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:2px}
+.tag.sv1{background:color-mix(in srgb,var(--s1) 35%,transparent);color:var(--ink)}
+.tag.sv2{background:color-mix(in srgb,var(--s2) 40%,transparent);color:var(--ink)}
+.tag.sv3{background:color-mix(in srgb,var(--s3) 35%,transparent);color:var(--ink)}
+.tag.now{background:var(--accent);color:var(--accent-ink)}
+.hb{display:grid;grid-template-columns:minmax(70px,38%) 1fr auto;gap:8px;align-items:center;margin:8px 0}
+.hb .hl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.hb .ht2{height:14px;border-radius:7px;background:var(--line);overflow:hidden}.hb .ht2 i{display:block;height:100%;background:var(--accent);border-radius:7px}
+.hb .hv{font-size:13px;font-weight:600;min-width:44px;text-align:right}
+.vcols{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px}
+.vc{flex:1;min-width:20px;display:flex;flex-direction:column;align-items:center;gap:3px}
+.vc .vb{height:110px;width:100%;display:flex;align-items:flex-end;border-bottom:1px solid var(--line)}
+.vc .vb i{display:block;width:100%;background:var(--accent);border-radius:4px 4px 0 0}
+.vc .vv{font-size:11px;color:var(--ink);font-weight:600;height:14px}.vc .vl{font-size:10px;color:var(--muted);white-space:nowrap}
+.ic{width:1.2em;height:1.2em;flex:none;vertical-align:-.22em}
+.btn .ic{margin-right:6px}
+.burger .ic{width:24px;height:24px;margin:0;vertical-align:middle}
+.back .ic{width:26px;height:26px;margin:0;vertical-align:middle}
+.homebtn .hi .ic{width:34px;height:34px;vertical-align:middle}
+.setrow .si .ic{width:26px;height:26px;vertical-align:middle}
+.setrow .chev .ic{width:22px;height:22px;vertical-align:middle}
+.dr-item span .ic{width:22px;height:22px;vertical-align:middle}
+.upd-btn .ic{width:24px;height:24px;margin:0}
+.sx{position:sticky;top:0;float:right;z-index:3;width:38px;height:38px;margin:-4px -4px 0 8px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;padding:0}
+.sx .ic{width:20px;height:20px;margin:0}
+.sbar{position:sticky;bottom:calc(-20px - env(safe-area-inset-bottom));margin:8px -16px calc(-20px - env(safe-area-inset-bottom));padding:10px 16px calc(12px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line);display:flex;gap:10px;z-index:2}
+.sbar .btn{flex:1}.sbar .btn.primary{flex:2}
+.tsbox{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:0 10px}.tsbox .ic{width:20px;height:20px;margin:0;color:var(--muted);flex:none}.tsbox input{flex:1;border:0;background:transparent;min-height:44px;font-size:16px;color:var(--ink);outline:none;min-width:0;padding:0}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}
+.chips.wrap{flex-wrap:wrap;overflow:visible;padding:0 0 12px}
+.chip{flex:none;display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font-size:14px;padding:7px 13px;cursor:pointer;min-height:36px}
+.chip .ic{width:16px;height:16px;margin:0}.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.chip.add{border-style:dashed;color:var(--muted)}
+.ep{display:flex;gap:12px;align-items:flex-start;cursor:pointer}
+.ep .bar{width:6px;align-self:stretch;border-radius:3px;background:var(--line);flex:none}
+.ep .bar.sv1{background:var(--s1)}.ep .bar.sv2{background:var(--s2)}.ep .bar.sv3{background:var(--s3)}
+.ep .mid{flex:1;min-width:0}.ep .mid b{overflow-wrap:anywhere}
+.ep .days{flex:none;text-align:right;font-weight:700;font-size:18px;line-height:1.1}.ep .days span{display:block;font-size:11px;font-weight:600;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:var(--shadow)}
+.kpi b{display:block;font-size:26px;letter-spacing:-.5px;line-height:1.1}.kpi span{font-size:13px;color:var(--muted)}
+.cal{display:grid;grid-template-columns:30px repeat(31,minmax(0,1fr));gap:3px 1.5px;align-items:center}
+.cal .ml{font-size:11px;color:var(--muted)}
+.cal .dn{font-size:8px;color:var(--muted);text-align:center;overflow:visible;white-space:nowrap}
+.cal i{display:block;height:18px;border-radius:2px;background:var(--line);opacity:.55}
+.cal i.no{background:none}
+.cal i.sv1{background:var(--s1);opacity:1}.cal i.sv2{background:var(--s2);opacity:1}.cal i.sv3{background:var(--s3);opacity:1}
+.cal i.td{outline:1.5px solid var(--ink);opacity:1}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+.yearnav{display:flex;align-items:center;gap:10px;margin-bottom:12px}.yearnav b{flex:1;text-align:center;font-size:20px}
+.chk{display:flex;gap:10px;align-items:center;font-size:15px;margin-bottom:12px}.chk input{width:22px;height:22px;flex:none}
+.wel-bg{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:20px}.wel{background:var(--bg);border-radius:20px;padding:22px 20px;max-width:420px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.4)}.wel .ab-icon{width:72px;height:72px;margin:0 auto 10px}.wel h2{text-transform:none;letter-spacing:0;margin:0 0 12px;text-align:center;font-size:22px;color:var(--ink)}.wel ul{list-style:none;margin:0 0 16px;padding:0}.wel li{display:flex;gap:12px;align-items:center;padding:8px 0;font-size:16px}.wel li .ic{width:24px;height:24px;color:var(--accent);flex:none;margin:0}
+input.bad{outline:2px solid var(--danger)}
+</style>
+</head>
+<body>
+<div id="splash"><div><div class="sp-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b7bf0"/><stop offset="1" stop-color="#0f2f7a"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#sg)"/><rect x="9" y="9" width="494" height="494" rx="104" fill="none" stroke="#000" stroke-width="18"/><rect x="112" y="136" width="288" height="272" rx="36" fill="#fff"/><path d="M112 172a36 36 0 0 1 36-36h216a36 36 0 0 1 36 36v40H112z" fill="#b9cffa"/><rect x="168" y="96" width="28" height="84" rx="14" fill="#fff" stroke="#0f2f7a" stroke-width="10"/><rect x="316" y="96" width="28" height="84" rx="14" fill="#fff" stroke="#0f2f7a" stroke-width="10"/><path d="M236 250h40v40h40v40h-40v40h-40v-40h-40v-40h40z" fill="#e5484d"/></svg></div><div class="sp-name">Sick Log</div><div class="sp-tag">log · track · understand</div><div class="sp-ver" id="spv"></div></div></div>
+<div id="app"></div>
+<script>
+'use strict';
+/* App shell (navigation, sheets, dialogs, themes, settings pages, changelog, update notice) follows Receipt Archive. */
+/* ---------- icons (Tabler Icons, MIT licence, bundled inline so the app works offline) ---------- */
+const ICONS={"home": "<path d=\"M5 12l-2 0l9 -9l9 9l-2 0\"/> <path d=\"M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7\"/> <path d=\"M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6\"/>", "plus": "<path d=\"M12 5l0 14\"/> <path d=\"M5 12l14 0\"/>", "chart": "<path d=\"M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6\"/> <path d=\"M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10\"/> <path d=\"M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -14\"/> <path d=\"M4 20h14\"/>", "history": "<path d=\"M12 8l0 4l2 2\"/> <path d=\"M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5\"/>", "settings": "<path d=\"M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065\"/> <path d=\"M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0\"/>", "info": "<path d=\"M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0\"/> <path d=\"M12 9h.01\"/> <path d=\"M11 12h1v4h1\"/>", "back": "<path d=\"M15 6l-6 6l6 6\"/>", "next": "<path d=\"M9 6l6 6l-6 6\"/>", "menu": "<path d=\"M4 6l16 0\"/> <path d=\"M4 12l16 0\"/> <path d=\"M4 18l16 0\"/>", "x": "<path d=\"M18 6l-12 12\"/> <path d=\"M6 6l12 12\"/>", "check": "<path d=\"M5 12l5 5l10 -10\"/>", "trash": "<path d=\"M4 7l16 0\"/><path d=\"M10 11l0 6\"/><path d=\"M14 11l0 6\"/><path d=\"M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12\"/><path d=\"M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3\"/>", "pencil": "<path d=\"M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4\"/> <path d=\"M13.5 6.5l4 4\"/>", "search": "<path d=\"M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0\"/> <path d=\"M21 21l-6 -6\"/>", "palette": "<path d=\"M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.989 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25\"/> <path d=\"M7.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\"/> <path d=\"M11.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\"/> <path d=\"M15.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\"/>", "save": "<path d=\"M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2\"/> <path d=\"M10 14a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\"/> <path d=\"M14 4l0 4l-6 0l0 -4\"/>", "lock": "<path d=\"M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6\"/> <path d=\"M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0\"/> <path d=\"M8 11v-4a4 4 0 1 1 8 0v4\"/>", "download": "<path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2\"/> <path d=\"M7 11l5 5l5 -5\"/> <path d=\"M12 4l0 12\"/>", "refresh": "<path d=\"M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4\"/> <path d=\"M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4\"/>", "pill": "<path d=\"M4.5 12.5l8 -8a4.94 4.94 0 0 1 7 7l-8 8a4.94 4.94 0 0 1 -7 -7\"/> <path d=\"M8.5 8.5l7 7\"/>", "health": "<path d=\"M6 4h-1a2 2 0 0 0 -2 2v3.5a5.5 5.5 0 0 0 11 0v-3.5a2 2 0 0 0 -2 -2h-1\"/> <path d=\"M8 15a6 6 0 1 0 12 0v-3\"/> <path d=\"M11 3v2\"/> <path d=\"M6 3v2\"/> <path d=\"M18 10a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\"/>", "bulb": "<path d=\"M3 12h1m8 -9v1m8 8h1m-15.4 -6.4l.7 .7m12.1 -.7l-.7 .7\"/> <path d=\"M9 16a5 5 0 1 1 6 0a3.5 3.5 0 0 0 -1 3a2 2 0 0 1 -4 0a3.5 3.5 0 0 0 -1 -3\"/> <path d=\"M9.7 17l4.6 0\"/>", "tag": "<path d=\"M6.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\"/> <path d=\"M3 6v5.172a2 2 0 0 0 .586 1.414l7.71 7.71a2.41 2.41 0 0 0 3.408 0l5.592 -5.592a2.41 2.41 0 0 0 0 -3.408l-7.71 -7.71a2 2 0 0 0 -1.414 -.586h-5.172a3 3 0 0 0 -3 3\"/>", "doc": "<path d=\"M14 3v4a1 1 0 0 0 1 1h4\"/> <path d=\"M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2\"/> <path d=\"M9 9l1 0\"/> <path d=\"M9 13l6 0\"/> <path d=\"M9 17l6 0\"/>", "briefcase": "<path d=\"M3 9a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -9\"/> <path d=\"M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2\"/> <path d=\"M12 12l0 .01\"/> <path d=\"M3 13a20 20 0 0 0 18 0\"/>", "bed": "<path d=\"M5 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\"/> <path d=\"M22 17v-3h-20\"/> <path d=\"M2 8v9\"/> <path d=\"M12 14h10v-2a3 3 0 0 0 -3 -3h-7v5\"/>"};
+ICONS.calendar='<path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 11h16"/>';
+ICONS.thermo='<path d="M10 13.5v-8.5a2 2 0 0 1 4 0v8.5a4 4 0 1 1 -4 0"/><path d="M12 9v8"/>';
+ICONS.list='<path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M5 6v.01"/><path d="M5 12v.01"/><path d="M5 18v.01"/>';
+const ic=(n,c='')=>`<svg class="ic${c?' '+c:''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||ICONS.tag}</svg>`;
+const iconSvg=()=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b7bf0"/><stop offset="1" stop-color="#0f2f7a"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#sg)"/><rect x="9" y="9" width="494" height="494" rx="104" fill="none" stroke="#000" stroke-width="18"/><rect x="112" y="136" width="288" height="272" rx="36" fill="#fff"/><path d="M112 172a36 36 0 0 1 36-36h216a36 36 0 0 1 36 36v40H112z" fill="#b9cffa"/><rect x="168" y="96" width="28" height="84" rx="14" fill="#fff" stroke="#0f2f7a" stroke-width="10"/><rect x="316" y="96" width="28" height="84" rx="14" fill="#fff" stroke="#0f2f7a" stroke-width="10"/><path d="M236 250h40v40h40v40h-40v40h-40v-40h-40v-40h40z" fill="#e5484d"/></svg>`;
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const isoOf=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const todayISO=()=>isoOf(new Date());
+const utc=iso=>{const[a,b,c]=iso.split('-').map(Number);return Date.UTC(a,b-1,c)};
+const addDays=(iso,n)=>{const d=new Date(utc(iso)+n*864e5);return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate())};
+const diffDays=(a,b)=>Math.round((utc(b)-utc(a))/864e5);
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const dmy=iso=>{if(!iso)return'';const[a,b,c]=iso.split('-');return `${Number(c)} ${MON[Number(b)-1]} ${a}`};
+const dm=iso=>{const[,b,c]=iso.split('-');return `${Number(c)} ${MON[Number(b)-1]}`};
+const plural=(n,w)=>`${n} ${w}${n===1?'':'s'}`;
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.append(t);setTimeout(()=>t.remove(),2600)}
+
+/* ---------- database (IndexedDB, on this device only) ---------- */
+const DB={db:null,
+ open(){return new Promise((res,rej)=>{const r=indexedDB.open('sicklog',1);
+  r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('kv');d.createObjectStore('episodes',{keyPath:'id',autoIncrement:true})};
+  r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)})},
+ tx(store,mode,fn){return new Promise((res,rej)=>{const t=this.db.transaction(store,mode);const r=fn(t.objectStore(store));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})},
+ get:(s,k)=>DB.tx(s,'readonly',o=>o.get(k)),
+ put:(s,v,k)=>DB.tx(s,'readwrite',o=>k!==undefined?o.put(v,k):o.put(v)),
+ del:(s,k)=>DB.tx(s,'readwrite',o=>o.delete(k)),
+ clear:s=>DB.tx(s,'readwrite',o=>o.clear()),
+ all:s=>DB.tx(s,'readonly',o=>o.getAll())
+};
+
+/* ---------- state ---------- */
+const DEF_TYPES=['Cold','Flu','Stomach bug','Covid','Migraine','Sinusitis','Allergy','Injury','Other'];
+const DEF_SYMPTOMS=['Fever','Cough','Sore throat','Runny nose','Blocked nose','Headache','Body aches','Fatigue','Chills','Nausea','Vomiting','Diarrhoea','Stomach pain','Dizziness','Loss of taste or smell','Ear pain','Shortness of breath'];
+const SEV=[[1,'Mild'],[2,'Moderate'],[3,'Severe']];
+const sevName=n=>(SEV.find(s=>s[0]===n)||[0,''])[1];
+const DEFAULTS={types:DEF_TYPES,symptoms:DEF_SYMPTOMS,theme:'blue',mode:'system'};
+let S={...DEFAULTS},eps=[],view='home',sub=null;
+let hf={q:'',type:''},statYear='all',calYear=new Date().getFullYear();
+async function loadAll(){
+  S={...DEFAULTS,...(await DB.get('kv','settings')||{})};
+  S.types=[...S.types];S.symptoms=[...S.symptoms];
+  await loadEps();
+}
+async function loadEps(){eps=await DB.all('episodes');eps.sort((a,b)=>b.start.localeCompare(a.start)||b.id-a.id)}
+const saveSettings=()=>DB.put('kv',S,'settings');
+/* an episode: {id,start,end|null,type,symptoms[],severity 1-3,off,doctor,meds,notes} */
+const epEnd=e=>e.end||(e.start>todayISO()?e.start:todayISO());
+const epLen=e=>diffDays(e.start,epEnd(e))+1;
+const ongoing=()=>eps.find(e=>!e.end);
+const inYear=(e,y)=>y==='all'||e.start.slice(0,4)===String(y);
+/* every calendar day that was a sick day -> the worst episode of that day */
+function dayMap(){
+  const m=new Map();
+  for(const e of eps){const n=Math.min(epLen(e),3700);for(let i=0;i<n;i++){const d=addDays(e.start,i),o=m.get(d);if(!o||(e.severity||0)>(o.severity||0))m.set(d,e)}}
+  return m;
+}
+const yearsList=()=>{const s=new Set([String(new Date().getFullYear())]);for(const d of dayMap().keys())s.add(d.slice(0,4));return[...s].sort().reverse()};
+
+/* ---------- in-app dialogs ---------- */
+function dlg({text='',input=null,value='',ok='OK',cancel='Cancel',danger=false,placeholder='',extra=null}){
+  return new Promise(res=>{
+    const bg=document.createElement('div');bg.className='dlg-bg';
+    bg.innerHTML=`<div class="dlg" role="dialog">${text?`<p>${esc(text)}</p>`:''}${input!==null?`<input id="di" value="${esc(value)}" placeholder="${esc(placeholder)}">`:''}<div class="acts">${cancel?`<button class="btn" id="dn">${esc(cancel)}</button>`:''}${extra?`<button class="btn" id="dx">${esc(extra)}</button>`:''}<button class="btn ${danger?'danger':'primary'}" id="dy">${esc(ok)}</button></div></div>`;
+    document.body.append(bg);const i=bg.querySelector('#di');if(i){setTimeout(()=>{i.focus();i.select()},50)}
+    const end=v=>{bg.remove();res(v)};
+    bg.querySelector('#dy').onclick=()=>end(input!==null?i.value:true);
+    const n=bg.querySelector('#dn');if(n)n.onclick=()=>end(input!==null?null:false);
+    const x=bg.querySelector('#dx');if(x)x.onclick=()=>end('extra');
+    if(i)i.onkeydown=e=>{if(e.key==='Enter')bg.querySelector('#dy').click()};
+  });
+}
+const askText=(text,value='',placeholder='')=>dlg({text,input:true,value,placeholder,ok:'OK'});
+const askYes=(text,ok='OK',danger=false)=>dlg({text,ok,danger});
+const tell=text=>dlg({text,cancel:''});
+function openSheet(html,o={}){
+  const bg=document.createElement('div');bg.className='sheet-bg';
+  bg.innerHTML=`<div class="sheet">${o.x===false?'':`<button class="sx" aria-label="Close" type="button">${ic('x')}</button>`}${html}</div>`;
+  document.body.append(bg);
+  const close=()=>bg.remove();bg.close=close;
+  bg.askClose=async()=>{
+    if(bg.isDirty&&bg.isDirty()&&!await dlg({text:'Discard your changes?',ok:'Discard',cancel:'Keep editing',danger:true}))return;
+    bg.close()};
+  const sx=bg.querySelector('.sx');if(sx)sx.onclick=()=>bg.askClose();
+  bg.addEventListener('mousedown',e=>{if(e.target===bg)bg.askClose()});
+  return bg;
+}
+
+/* ---------- themes ---------- */
+const THEMES={blue:{n:'Blue',h:217,s:80,l:42},teal:{n:'Teal',h:174,s:75,l:28},purple:{n:'Purple',h:262,s:60,l:44},orange:{n:'Orange',h:22,s:88,l:38},graphite:{n:'Graphite',h:210,s:10,l:30}};
+const isDark=()=>S.mode==='dark'||(S.mode!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);
+function applyTheme(){
+  const t=THEMES[S.theme]||THEMES.blue,d=isDark(),h=t.h,bs=Math.min(t.s,18),r=document.documentElement.style;
+  const v=d?{'--bg':`hsl(${h},${bs}%,8%)`,'--surface':`hsl(${h},${bs}%,12%)`,'--ink':`hsl(${h},20%,93%)`,'--muted':`hsl(${h},10%,66%)`,'--line':`hsl(${h},${bs}%,22%)`,'--accent':`hsl(${h},${t.s}%,62%)`,'--accent-ink':`hsl(${h},60%,8%)`,'--accent-soft':`hsl(${h},35%,18%)`,'--danger':'#f97066','--shadow':'none'}
+   :{'--bg':`hsl(${h},${bs}%,96%)`,'--surface':'#fff','--ink':`hsl(${h},25%,10%)`,'--muted':`hsl(${h},8%,38%)`,'--line':`hsl(${h},${Math.min(bs,12)}%,87%)`,'--accent':`hsl(${h},${t.s}%,${t.l}%)`,'--accent-ink':'#fff','--accent-soft':`hsl(${h},45%,92%)`,'--danger':'#b42318','--shadow':'0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.06)'};
+  for(const k in v)r.setProperty(k,v[k]);
+  r.colorScheme=d?'dark':'light';
+  const cc=document.createElement('canvas').getContext('2d');cc.fillStyle=v['--bg'];const m=document.querySelector('meta[name=theme-color]');if(m)m.content=cc.fillStyle;
+}
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(S.mode==='system')applyTheme()})}catch(e){}
+
+/* ---------- shell: app bar, navigation, drawer ---------- */
+let upd=null;
+const appbar=()=>`<div class="appbar"><div class="ab-icon">${iconSvg()}</div><div class="ab-title"><b>Sick Log</b><span>v${APP_VERSION}${upd?` → <span class="new">v${esc(upd.version)}</span>`:''}</span></div>${upd?`<button class="upd-btn" id="updBtn" aria-label="Update available">${ic('refresh')}</button>`:''}<button class="burger" id="burger" aria-label="Menu">${ic('menu')}</button></div>`;
+const backHead=t=>`<div class="pagehead"><button class="back" id="backBtn" aria-label="Back">${ic('back')}</button><h1>${t}</h1></div>`;
+async function render(){
+  const body=view==='home'?homeView():view==='history'?historyView():view==='stats'?statsView():view==='calendar'?calendarView():settingsView();
+  $('#app').innerHTML=appbar()+'<div class="page">'+body+'</div>';
+  $('#burger').onclick=openDrawer;
+  const ub=$('#updBtn');if(ub)ub.onclick=openUpdate;
+  const bb=$('#backBtn');if(bb)bb.onclick=goBack;
+  ({home:bindHome,history:bindHistory,stats:bindStats,calendar:bindCalendar,settings:bindSettings})[view]();
+}
+function nav(v,s=null){history.pushState({v,s},'');view=v;sub=s;render();scrollTo(0,0)}
+const goBack=()=>{if(history.state&&history.state.v&&history.length>1)history.back();else nav('home')};
+addEventListener('popstate',e=>{const st=e.state||{v:'home',s:null};view=st.v||'home';sub=st.s||null;render()});
+function openDrawer(){
+  const bg=document.createElement('div');bg.className='drawer-bg';
+  const items=[['home','home','Home'],['add','plus','Log sickness'],['history','list','History'],['stats','chart','Statistics'],['calendar','calendar','Calendar'],['settings','settings','Settings'],['log','history','Changelog'],['about','info','About & license']];
+  bg.innerHTML=`<div class="drawer"><div class="dr-head"><div class="ab-icon">${iconSvg()}</div><div><b>Sick Log</b><div class="sub">Version ${APP_VERSION}</div></div></div>`+
+   items.map(i=>`<button class="dr-item" data-a="${i[0]}"><span>${ic(i[1])}</span>${i[2]}</button>`).join('')+'</div>';
+  document.body.append(bg);
+  const close=()=>bg.remove();
+  bg.addEventListener('click',e=>{if(e.target===bg)close()});
+  bg.querySelectorAll('.dr-item').forEach(b=>b.onclick=()=>{close();const a=b.dataset.a;
+    if(a==='add')openEpisode(null);
+    else if(a==='log')openChangelog();
+    else if(a==='about')nav('settings','about');
+    else nav(a)});
+}
+
+/* ---------- home ---------- */
+function yearLine(y){
+  const m=dayMap();let d=0;for(const k of m.keys())if(k.startsWith(y))d++;
+  const n=eps.filter(e=>inYear(e,y)).length;
+  return n||d?`${y}: ${plural(n,'episode')} · ${plural(d,'day')}`:`${y}: no sickness logged`;
+}
+function healthyLine(){
+  if(!eps.length)return'Nothing logged yet';
+  const m=dayMap(),t=todayISO();if(m.has(t))return'Sick today';
+  const past=[...m.keys()].filter(d=>d<t).sort();if(!past.length)return'';
+  return `Healthy for ${plural(diffDays(past[past.length-1],t),'day')}`;
+}
+function homeView(){
+  const o=ongoing(),y=String(new Date().getFullYear());
+  return `<div class="pagehead"><h1>Home</h1></div>`+
+  (o?`<button class="homebtn main" id="hEnd"><span class="hi">${ic('check')}</span><span class="ht"><b>I’m well again</b><span class="sub">${esc(o.type)} since ${dm(o.start)} · day ${epLen(o)}</span></span></button>
+  <button class="homebtn" id="hCur"><span class="hi">${ic('pencil')}</span><span class="ht"><b>Update current sickness</b><span class="sub">Symptoms, severity, medication, notes</span></span></button>`
+  :`<button class="homebtn main" id="hAdd"><span class="hi">${ic('thermo')}</span><span class="ht"><b>I’m sick</b><span class="sub">Start logging from today</span></span></button>`)+
+  `<button class="homebtn" id="hPast"><span class="hi">${ic('plus')}</span><span class="ht"><b>Add past sickness</b><span class="sub">Enter an earlier episode</span></span></button>
+  <button class="homebtn" id="hHist"><span class="hi">${ic('list')}</span><span class="ht"><b>History</b><span class="sub">${plural(eps.length,'episode')} logged</span></span></button>
+  <button class="homebtn" id="hStats"><span class="hi">${ic('chart')}</span><span class="ht"><b>Statistics</b><span class="sub">${yearLine(y)}</span></span></button>
+  <button class="homebtn" id="hCal"><span class="hi">${ic('calendar')}</span><span class="ht"><b>Calendar</b><span class="sub">${healthyLine()}</span></span></button>`;
+}
+function bindHome(){
+  const o=ongoing();
+  if(o){$('#hEnd').onclick=()=>endEpisode(o);$('#hCur').onclick=()=>openEpisode(o)}
+  else $('#hAdd').onclick=()=>openEpisode(null,{now:true});
+  $('#hPast').onclick=()=>openEpisode(null);
+  $('#hHist').onclick=()=>nav('history');
+  $('#hStats').onclick=()=>nav('stats');
+  $('#hCal').onclick=()=>nav('calendar');
+}
+async function endEpisode(o){
+  const t=todayISO(),y=addDays(t,-1);
+  const sh=openSheet(`<h3>Well again</h3><div class="sub" style="margin-bottom:12px">${esc(o.type)}, sick since ${dmy(o.start)}. Which was the last sick day?</div>
+   <label class="f">Last sick day<input type="date" id="ee" value="${y<o.start?o.start:y}" min="${o.start}" max="${t}"></label>
+   <label class="f">Days off work<input type="number" inputmode="numeric" min="0" id="eo" value="${o.off??''}" placeholder="0"></label>
+   <div class="sbar"><button class="btn" id="ec">Cancel</button><button class="btn primary" id="es">Save</button></div>`);
+  sh.querySelector('#ec').onclick=()=>sh.close();
+  sh.querySelector('#es').onclick=async()=>{
+    const v=sh.querySelector('#ee').value;if(!v||v<o.start){sh.querySelector('#ee').classList.add('bad');return}
+    o.end=v;const off=parseInt(sh.querySelector('#eo').value);o.off=off>=0?off:(o.off||0);
+    await DB.put('episodes',o);await loadEps();sh.close();toast('Glad you’re better');render()};
+}
+
+/* ---------- episode form ---------- */
+function openEpisode(ep,o={}){
+  const isNew=!ep,t=todayISO();
+  const d=ep?{...ep,symptoms:[...(ep.symptoms||[])]}:{start:t,end:o.now?null:t,type:'',symptoms:[],severity:2,off:'',doctor:false,meds:'',notes:''};
+  let still=!d.end,dirty=false;
+  const sh=openSheet(`<h3>${isNew?(o.now?'I’m sick':'Add sickness'):'Edit sickness'}</h3>
+   <div class="flabel">Type</div><div class="chips wrap" id="eTypes"></div>
+   <div class="row"><label class="f">First sick day<input type="date" id="eS" value="${d.start}"></label><label class="f" id="eEw">Last sick day<input type="date" id="eE" value="${d.end||''}"></label></div>
+   <label class="chk"><input type="checkbox" id="eStill" ${still?'checked':''}> Still sick (no end date yet)</label>
+   <div class="flabel">Symptoms</div><div class="chips wrap" id="eSym"></div>
+   <div class="flabel">Severity</div><div class="seg" id="eSev" style="margin-bottom:12px"></div>
+   <label class="f">Days off work<input type="number" inputmode="numeric" min="0" id="eOff" value="${d.off??''}" placeholder="0"></label><div class="hint" id="eLen"></div>
+   <label class="chk"><input type="checkbox" id="eDoc" ${d.doctor?'checked':''}> Saw a doctor</label>
+   <label class="f">Medication<input id="eMeds" value="${esc(d.meds||'')}" placeholder="What you took" autocomplete="off"></label>
+   <label class="f">Notes<textarea id="eNotes" placeholder="Anything else: suspected cause, peak fever…">${esc(d.notes||'')}</textarea></label>
+   <div class="sbar">${isNew?'':`<button class="btn danger" id="eDel">${ic('trash')}Delete</button>`}<button class="btn primary" id="eSave">Save</button></div>`);
+  const q=s=>sh.querySelector(s);
+  sh.isDirty=()=>dirty;
+  sh.addEventListener('input',()=>dirty=true);
+  const drawTypes=()=>{const list=[...S.types];if(d.type&&!list.includes(d.type))list.push(d.type);
+    q('#eTypes').innerHTML=list.map(n=>`<button type="button" class="chip ${d.type===n?'on':''}" data-t="${esc(n)}">${esc(n)}</button>`).join('')+`<button type="button" class="chip add" data-new="1">${ic('plus')}New</button>`;
+    q('#eTypes').querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{d.type=b.dataset.t;dirty=true;drawTypes()});
+    q('#eTypes [data-new]').onclick=async()=>{const n=(await askText('Name of the new type')||'').trim();if(!n)return;
+      const ex=S.types.find(x=>x.toLowerCase()===n.toLowerCase());if(!ex){S.types.push(n);saveSettings()}d.type=ex||n;dirty=true;drawTypes()}};
+  const drawSym=()=>{const list=[...S.symptoms];d.symptoms.forEach(s=>{if(!list.includes(s))list.push(s)});
+    q('#eSym').innerHTML=list.map(n=>`<button type="button" class="chip ${d.symptoms.includes(n)?'on':''}" data-s="${esc(n)}">${esc(n)}</button>`).join('')+`<button type="button" class="chip add" data-new="1">${ic('plus')}New</button>`;
+    q('#eSym').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{const n=b.dataset.s,i=d.symptoms.indexOf(n);if(i<0)d.symptoms.push(n);else d.symptoms.splice(i,1);dirty=true;b.classList.toggle('on')});
+    q('#eSym [data-new]').onclick=async()=>{const n=(await askText('Name of the new symptom')||'').trim();if(!n)return;
+      const ex=S.symptoms.find(x=>x.toLowerCase()===n.toLowerCase());if(!ex){S.symptoms.push(n);saveSettings()}const nm=ex||n;if(!d.symptoms.includes(nm))d.symptoms.push(nm);dirty=true;drawSym()}};
+  const drawSev=()=>{q('#eSev').innerHTML=SEV.map(([k,n])=>`<button type="button" data-v="${k}" class="${d.severity===k?'on':''}">${n}</button>`).join('');
+    q('#eSev').querySelectorAll('button').forEach(b=>b.onclick=()=>{d.severity=Number(b.dataset.v);dirty=true;drawSev()})};
+  const sync=()=>{still=q('#eStill').checked;q('#eEw').style.opacity=still?.4:1;q('#eE').disabled=still;
+    const s=q('#eS').value,e=still?null:q('#eE').value;q('#eE').min=s;
+    q('#eLen').textContent=s&&(still||e)&&(still||e>=s)?`This sickness: ${plural(epLen({start:s,end:e}),'day')}${still?' so far':''}`:''};
+  q('#eStill').onchange=()=>{if(!q('#eStill').checked&&!q('#eE').value)q('#eE').value=q('#eS').value>todayISO()?q('#eS').value:todayISO();sync()};
+  q('#eS').onchange=()=>{if(!still&&q('#eE').value&&q('#eE').value<q('#eS').value)q('#eE').value=q('#eS').value;sync()};q('#eE').onchange=sync;
+  drawTypes();drawSym();drawSev();sync();
+  const del=q('#eDel');if(del)del.onclick=async()=>{if(!await askYes('Delete this sickness for good?','Delete',true))return;await DB.del('episodes',ep.id);await loadEps();sh.close();toast('Deleted');render()};
+  q('#eSave').onclick=async()=>{
+    const s=q('#eS').value,e=still?null:q('#eE').value;
+    q('#eS').classList.toggle('bad',!s);q('#eE').classList.toggle('bad',!still&&(!e||e<s));
+    if(!s||(!still&&(!e||e<s))){toast('Check the dates');return}
+    if(!d.type){toast('Choose a type');q('#eTypes').scrollIntoView({block:'center'});return}
+    const other=eps.find(x=>!x.end&&(!ep||x.id!==ep.id));
+    if(still&&other){await tell(`“${other.type}” from ${dmy(other.start)} is still open. Give that one an end date first.`);return}
+    const off=parseInt(q('#eOff').value);
+    const rec={start:s,end:e,type:d.type,symptoms:S.symptoms.filter(x=>d.symptoms.includes(x)).concat(d.symptoms.filter(x=>!S.symptoms.includes(x))),severity:d.severity,off:off>=0?off:0,doctor:q('#eDoc').checked,meds:q('#eMeds').value.trim(),notes:q('#eNotes').value.trim()};
+    if(ep)rec.id=ep.id;
+    await DB.put('episodes',rec);await loadEps();sh.close();toast('Saved');render()};
+}
+
+/* ---------- history ---------- */
+function epCard(e){
+  const n=epLen(e),sv=e.severity||0;
+  const bits=[];if((e.symptoms||[]).length)bits.push(esc(e.symptoms.join(', ')));
+  const ex=[];if(e.off)ex.push(`${plural(e.off,'day')} off work`);if(e.doctor)ex.push('doctor');if(e.meds)ex.push(esc(e.meds));
+  return `<div class="card ep" data-id="${e.id}"><span class="bar sv${sv}"></span><div class="mid"><b>${esc(e.type)}</b>${sv?`<span class="tag sv${sv}">${sevName(sv)}</span>`:''}${e.end?'':'<span class="tag now">ongoing</span>'}
+   <div class="sub">${e.end?(e.start===e.end?dmy(e.start):`${e.start.slice(0,4)===e.end.slice(0,4)?dm(e.start):dmy(e.start)} – ${dmy(e.end)}`):`since ${dmy(e.start)}`}</div>
+   ${bits.length?`<div class="sub">${bits.join('')}</div>`:''}${ex.length?`<div class="sub">${ex.join(' · ')}</div>`:''}${e.notes?`<div class="sub" style="font-style:italic;overflow-wrap:anywhere">${esc(e.notes)}</div>`:''}</div>
+   <div class="days">${n}<span>${n===1?'day':'days'}</span></div></div>`;
+}
+function histList(){
+  const f=hf.q.trim().toLowerCase();
+  const list=eps.filter(e=>(!hf.type||e.type===hf.type)&&(!f||[e.type,(e.symptoms||[]).join(' '),e.meds,e.notes,e.start,e.end].join(' ').toLowerCase().includes(f)));
+  if(!eps.length)return `<div class="empty">No sickness logged yet.<br>Lucky you. Tap <b>Add</b> when that changes.</div>`;
+  if(!list.length)return `<div class="empty">Nothing matches.</div>`;
+  let h='',yr='';
+  for(const e of list){const y=e.start.slice(0,4);if(y!==yr){yr=y;const ys=list.filter(x=>x.start.slice(0,4)===y);h+=`<h2>${y} · ${plural(ys.length,'episode')} · ${plural(ys.reduce((a,x)=>a+epLen(x),0),'day')}</h2>`}h+=epCard(e)}
+  return h;
+}
+function historyView(){
+  const used=[...new Set(eps.map(e=>e.type))];
+  return `<div class="pagehead"><button class="back" id="backBtn" aria-label="Back">${ic('back')}</button><h1>History</h1><button class="btn primary small" id="hNew">${ic('plus')}Add</button></div>`+
+   (eps.length>3?`<div class="tsbox">${ic('search')}<input id="hq" placeholder="Search type, symptom, notes" value="${esc(hf.q)}" autocomplete="off"></div>
+   <div class="chips"><button class="chip ${hf.type?'':'on'}" data-ft="">All</button>${used.map(t=>`<button class="chip ${hf.type===t?'on':''}" data-ft="${esc(t)}">${esc(t)}</button>`).join('')}</div>`:'')+
+   `<div id="hlist">${histList()}</div>`;
+}
+function bindHistList(){document.querySelectorAll('#hlist .ep').forEach(c=>c.onclick=()=>{const e=eps.find(x=>x.id===Number(c.dataset.id));if(e)openEpisode(e)})}
+function bindHistory(){
+  $('#hNew').onclick=()=>openEpisode(null);
+  const q=$('#hq');if(q)q.oninput=()=>{hf.q=q.value;$('#hlist').innerHTML=histList();bindHistList()};
+  document.querySelectorAll('[data-ft]').forEach(b=>b.onclick=()=>{hf.type=b.dataset.ft;render()});
+  bindHistList();
+}
+
+/* ---------- statistics ---------- */
+function hbars(rows,unit=''){
+  const mx=Math.max(...rows.map(r=>r[1]),1);
+  return rows.map(r=>`<div class="hb"><span class="hl">${esc(r[0])}</span><span class="ht2"><i style="width:${Math.max(3,r[1]/mx*100)}%"></i></span><span class="hv">${r[1]}${unit}${r[2]!==undefined?` <span class="sub" style="font-size:12px;font-weight:400">· ${r[2]}</span>`:''}</span></div>`).join('');
+}
+function vcols(rows){
+  const mx=Math.max(...rows.map(r=>r[1]),1);
+  return `<div class="vcols">${rows.map(r=>`<div class="vc"><span class="vv">${r[1]||''}</span><span class="vb"><i style="height:${r[1]?Math.max(3,r[1]/mx*100):0}%"></i></span><span class="vl">${esc(r[0])}</span></div>`).join('')}</div>`;
+}
+function statsView(){
+  const years=yearsList();if(statYear!=='all'&&!years.includes(String(statYear)))statYear='all';
+  const head=backHead('Statistics')+`<div class="chips" style="margin-bottom:10px"><button class="chip ${statYear==='all'?'on':''}" data-y="all">All years</button>${years.map(y=>`<button class="chip ${String(statYear)===y?'on':''}" data-y="${y}">${y}</button>`).join('')}</div>`;
+  if(!eps.length)return head+`<div class="empty">No sickness logged yet. Your statistics will appear here.</div>`;
+  const m=dayMap(),days=[...m.keys()].sort(),sel=eps.filter(e=>inYear(e,statYear));
+  const dSel=days.filter(d=>statYear==='all'||d.startsWith(statYear));
+  const tot=sel.reduce((a,e)=>a+epLen(e),0),off=sel.reduce((a,e)=>a+(e.off||0),0),doc=sel.filter(e=>e.doctor).length;
+  const nYears=statYear==='all'?Math.max(1,new Date().getFullYear()-Number(days[0].slice(0,4))+1):1;
+  let h=head+`<div class="kpis">
+   <div class="kpi"><b>${sel.length}</b><span>${sel.length===1?'episode':'episodes'}${statYear==='all'&&nYears>1?` · ${(sel.length/nYears).toFixed(1)} per year`:''}</span></div>
+   <div class="kpi"><b>${dSel.length}</b><span>sick ${dSel.length===1?'day':'days'}${statYear==='all'&&nYears>1?` · ${(dSel.length/nYears).toFixed(1)} per year`:''}</span></div>
+   <div class="kpi"><b>${sel.length?(tot/sel.length).toFixed(1):'0'}</b><span>days per sickness on average</span></div>
+   <div class="kpi"><b>${off}</b><span>${off===1?'day':'days'} off work</span></div>
+   <div class="kpi"><b>${doc}</b><span>doctor ${doc===1?'visit':'visits'}</span></div>
+   <div class="kpi"><b>${sel.length?Math.max(...sel.map(epLen)):0}</b><span>days, longest sickness</span></div></div>`;
+  if(statYear==='all'){
+    const ys=[...years].reverse();
+    h+=`<h2>Sick days per year</h2><div class="card">${vcols(ys.map(y=>[y,days.filter(d=>d.startsWith(y)).length]))}</div>
+    <h2>Episodes per year</h2><div class="card">${vcols(ys.map(y=>[y,eps.filter(e=>inYear(e,y)).length]))}</div>`;
+  }
+  h+=`<h2>Sick days per month${statYear==='all'?' · all years together':''}</h2><div class="card">${vcols(MON.map((n,i)=>[n,dSel.filter(d=>Number(d.slice(5,7))===i+1).length]))}
+   ${dSel.length?`<div class="sub" style="margin-top:8px">${seasonLine(dSel)}</div>`:''}</div>`;
+  if(sel.length){
+    const by=(key)=>{const c=new Map();for(const e of sel)for(const k of key(e)){const o=c.get(k)||[0,0];o[0]++;o[1]+=epLen(e);c.set(k,o)}return[...c].sort((a,b)=>b[1][0]-a[1][0]||b[1][1]-a[1][1])};
+    h+=`<h2>By type · episodes · days</h2><div class="card">${hbars(by(e=>[e.type]).map(([k,v])=>[k,v[0],plural(v[1],'day')]))}</div>`;
+    const sy=by(e=>e.symptoms||[]);
+    if(sy.length)h+=`<h2>Most frequent symptoms · episodes</h2><div class="card">${hbars(sy.slice(0,10).map(([k,v])=>[k,v[0]]))}</div>`;
+    h+=`<h2>By severity · episodes</h2><div class="card">${hbars(SEV.map(([k,n])=>[n,sel.filter(e=>e.severity===k).length]))}</div>`;
+  }
+  if(statYear==='all'&&days.length){
+    const t=todayISO();let best=0,bs='',be='';
+    for(let i=1;i<days.length;i++){const g=diffDays(days[i-1],days[i])-1;if(g>best){best=g;bs=addDays(days[i-1],1);be=addDays(days[i],-1)}}
+    const last=days.filter(d=>d<=t).pop();
+    const curH=m.has(t)?0:(last?diffDays(last,t):0);
+    if(curH>best){best=curH;bs=addDays(last,1);be=t}
+    h+=`<h2>Healthy stretches</h2><div class="card"><div class="hb" style="grid-template-columns:1fr auto"><span class="hl">Currently healthy for</span><span class="hv">${plural(curH,'day')}</span></div>
+     <div class="hb" style="grid-template-columns:1fr auto"><span class="hl">Longest healthy stretch</span><span class="hv">${plural(best,'day')}</span></div>${best?`<div class="sub">${dmy(bs)} – ${dmy(be)}</div>`:''}</div>`;
+  }
+  return h;
+}
+function seasonLine(ds){
+  const c=Array(12).fill(0);ds.forEach(d=>c[Number(d.slice(5,7))-1]++);
+  const mx=Math.max(...c),top=c.map((v,i)=>[v,i]).filter(x=>x[0]===mx).map(x=>MON[x[1]]);
+  const win=c[11]+c[0]+c[1],tot=ds.length;
+  return `Most sick days in ${top.join(', ')}. Winter (Dec–Feb) holds ${Math.round(win/tot*100)}% of them.`;
+}
+function bindStats(){document.querySelectorAll('[data-y]').forEach(b=>b.onclick=()=>{statYear=b.dataset.y;render()})}
+
+/* ---------- calendar (one year at a glance) ---------- */
+function calendarView(){
+  const m=dayMap(),t=todayISO(),y=calYear;
+  let g='<span></span>'+Array.from({length:31},(_,i)=>`<span class="dn">${(i+1)%5===0||i===0?i+1:''}</span>`).join('');
+  let n=0;
+  for(let mo=0;mo<12;mo++){
+    const dim=new Date(y,mo+1,0).getDate();g+=`<span class="ml">${MON[mo]}</span>`;
+    for(let d=1;d<=31;d++){
+      if(d>dim){g+='<i class="no"></i>';continue}
+      const iso=`${y}-${pad(mo+1)}-${pad(d)}`,e=m.get(iso);if(e)n++;
+      g+=`<i class="${e?'sv'+(e.severity||2):''}${iso===t?' td':''}"${e?` data-id="${e.id}"`:''}></i>`;
+    }
+  }
+  const cnt=eps.filter(e=>inYear(e,y)).length;
+  return backHead('Calendar')+`<div class="yearnav"><button class="btn small" id="cPrev" aria-label="Previous year">${ic('back')}</button><b>${y}</b><button class="btn small" id="cNext" aria-label="Next year" ${y>=new Date().getFullYear()+1?'disabled':''}>${ic('next')}</button></div>
+   <div class="card"><div class="cal">${g}</div><div class="legend"><span><i style="background:var(--s1)"></i>Mild</span><span><i style="background:var(--s2)"></i>Moderate</span><span><i style="background:var(--s3)"></i>Severe</span><span><i style="outline:1.5px solid var(--ink)"></i>Today</span></div></div>
+   <div class="sub" style="text-align:center;margin-bottom:14px">${n?`${plural(cnt,'episode')} started in ${y}, ${plural(n,'sick day')}. Tap a coloured day to open it.`:`No sick days in ${y}.`}</div>`+
+   eps.filter(e=>e.start.slice(0,4)===String(y)||epEnd(e).slice(0,4)===String(y)).map(epCard).join('');
+}
+function bindCalendar(){
+  $('#cPrev').onclick=()=>{calYear--;render()};$('#cNext').onclick=()=>{calYear++;render()};
+  const open=id=>{const e=eps.find(x=>x.id===Number(id));if(e)openEpisode(e)};
+  document.querySelectorAll('.cal i[data-id]').forEach(c=>c.onclick=()=>open(c.dataset.id));
+  document.querySelectorAll('.page .ep').forEach(c=>c.onclick=()=>open(c.dataset.id));
+}
+
+/* ---------- settings ---------- */
+const SET_PAGES=[['types','thermo','Sickness types','The list you pick from when logging'],['symptoms','health','Symptoms','The symptom chips in the form'],['appearance','palette','Appearance','Colour theme, light and dark mode'],['backup','save','Backup & export','Save, restore or export your data'],['privacy','lock','Privacy','Where your data is kept'],['install','download','Install app','Add Sick Log to the home screen'],['about','info','About & license','Version, changelog, license']];
+function settingsView(){
+  if(!sub)return backHead('Settings')+SET_PAGES.map(p=>`<button class="card setrow" data-p="${p[0]}"><span class="si">${ic(p[1])}</span><span class="st"><b>${p[2]}</b><span class="sub">${p[3]}</span></span><span class="chev">${ic('next')}</span></button>`).join('')+
+    `<div class="sub" style="text-align:center;margin:16px 0">All data stays on this device. Changes save automatically.</div>`;
+  const pg=SET_PAGES.find(p=>p[0]===sub)||SET_PAGES[0];
+  return backHead(pg[2])+pageBody(pg[0]);
+}
+function listEditor(key,word){
+  return `<div class="card"><div class="sub" style="margin-bottom:10px">Rename, remove or add ${word}s. Renaming also renames it in everything you have logged. Removing only takes it off the list; logged sicknesses keep it.</div>
+   <div id="lst">${S[key].map((n,i)=>`<div class="catrow"><input class="nm" data-li="${i}" value="${esc(n)}" aria-label="Name"><button class="btn small danger" data-ld="${i}" aria-label="Remove">${ic('x')}</button></div>`).join('')}</div>
+   <button class="btn small block" id="lAdd">${ic('plus')}Add ${word}</button><div style="height:8px"></div><button class="btn small block" id="lReset">Add the standard ${word}s again</button></div>`;
+}
+function pageBody(id){
+  if(id==='types')return listEditor('types','type');
+  if(id==='symptoms')return listEditor('symptoms','symptom');
+  if(id==='appearance')return `<div class="card"><div class="sub" style="margin-bottom:10px">Colour theme</div><div class="swatches">${Object.entries(THEMES).map(([k,t])=>
+      `<button class="sw ${S.theme===k?'on':''}" data-theme="${k}"><i style="background:hsl(${t.h},${t.s}%,${t.l+8}%)"></i><span>${t.n}</span></button>`).join('')}</div></div>
+    <div class="card"><div class="sub" style="margin-bottom:10px">Mode</div><div class="seg">${[['system','Auto'],['light','Light'],['dark','Dark']].map(([k,n])=>`<button data-mode="${k}" class="${S.mode===k?'on':''}">${n}</button>`).join('')}</div></div>`;
+  if(id==='backup')return `<div class="card"><b>Save backup</b><div class="sub" style="margin:6px 0 12px">One file with everything you logged and your lists. Use it to move to another phone or to keep a copy. ${plural(eps.length,'episode')} on this phone.</div><button class="btn primary block" id="bkSave">Save backup file</button></div>
+    <div class="card"><b>Load backup</b><div class="sub" style="margin:6px 0 12px">Choose a backup file. You decide whether to replace everything or merge it with what is on this phone. Nothing changes before you confirm.</div><button class="btn block" id="bkLoad">Choose backup file…</button><input type="file" id="bkFile" accept=".json,application/json" hidden></div>
+    <div class="card"><b>Export as table</b><div class="sub" style="margin:6px 0 12px">A CSV file with one row per sickness, to open in Excel or Google Sheets.</div><button class="btn block" id="bkCsv">Export CSV</button></div>
+    <div class="sub">Backup and CSV files are not encrypted and hold health information. Store them somewhere safe.</div>`;
+  if(id==='privacy')return `<div class="card" style="font-size:14px">
+    <p style="margin-top:0"><b>Your data stays on this device.</b> Everything you log is stored only in this browser’s storage on your phone. It is never uploaded to the web host or to any server, and the app has no backend and no tracking.</p>
+    <p>The only online request the app makes is to its own web address, to check whether a newer version exists. That request carries none of your data.</p>
+    <p>Backup and CSV files are built on your phone and leave it only when you save or share them.</p>
+    <p style="margin-bottom:0"><b>Keep in mind:</b> the data is not encrypted inside the app, so keep a screen lock on your phone. Clearing the browser’s site data, or removing the app together with its data, deletes everything, so save a backup now and then.</p></div>`;
+  if(id==='install')return `<div class="card"><div class="sub" id="instInfo" style="margin-bottom:10px"></div><button class="btn primary block" id="instBtn">Install app on this device</button></div>`;
+  if(id==='about')return `<div class="card" style="font-size:14px"><p style="margin-top:0"><b>Sick Log</b> · version <b>${APP_VERSION}</b></p>
+    <p>A private diary of your sick days. It is a personal record, not medical advice.</p>
+    <p>Free software under the GNU General Public License v3.0. Includes Tabler Icons (MIT).</p>
+    <div class="row"><button class="btn small" id="logBtn">Changelog</button><button class="btn small" id="licBtn">License</button></div></div>`;
+  return '';
+}
+function bindList(key,defs,word){
+  const app=$('#app');
+  app.querySelectorAll('[data-li]').forEach(i=>i.onchange=async()=>{
+    const ix=Number(i.dataset.li),old=S[key][ix],nw=i.value.trim();
+    if(!nw||S[key].some((x,j)=>j!==ix&&x.toLowerCase()===nw.toLowerCase())){i.value=old;toast(nw?'That name exists already':'A name is needed');return}
+    if(nw===old)return;S[key][ix]=nw;await saveSettings();
+    for(const e of eps){let ch=false;if(key==='types'&&e.type===old){e.type=nw;ch=true}
+      if(key==='symptoms'&&(e.symptoms||[]).includes(old)){e.symptoms=e.symptoms.map(s=>s===old?nw:s);ch=true}
+      if(ch)await DB.put('episodes',e)}
+    toast('Renamed')});
+  app.querySelectorAll('[data-ld]').forEach(b=>b.onclick=async()=>{S[key].splice(Number(b.dataset.ld),1);await saveSettings();render()});
+  $('#lAdd').onclick=async()=>{const n=(await askText(`Name of the new ${word}`)||'').trim();if(!n)return;
+    if(S[key].some(x=>x.toLowerCase()===n.toLowerCase())){toast('That name exists already');return}S[key].push(n);await saveSettings();render()};
+  $('#lReset').onclick=async()=>{let a=0;for(const d of defs)if(!S[key].some(x=>x.toLowerCase()===d.toLowerCase())){S[key].push(d);a++}await saveSettings();toast(a?`${a} added`:'All standard ones are on the list');render()};
+}
+function bindSettings(){
+  const app=$('#app');
+  app.querySelectorAll('.setrow').forEach(b=>b.onclick=()=>nav('settings',b.dataset.p));
+  if(sub==='types')bindList('types',DEF_TYPES,'type');
+  if(sub==='symptoms')bindList('symptoms',DEF_SYMPTOMS,'symptom');
+  if(sub==='appearance'){
+    app.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>{S.theme=b.dataset.theme;saveSettings();applyTheme();render()});
+    app.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{S.mode=b.dataset.mode;saveSettings();applyTheme();render()});
+  }
+  if(sub==='backup'){$('#bkSave').onclick=saveBackup;$('#bkCsv').onclick=exportCsv;$('#bkLoad').onclick=()=>$('#bkFile').click();
+    $('#bkFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)loadBackup(f)}}
+  if(sub==='install')bindInstall();
+  if(sub==='about'){$('#logBtn').onclick=openChangelog;$('#licBtn').onclick=openLicense}
+}
+
+/* ---------- backup & export ---------- */
+async function deliver(blob,name){
+  const f=new File([blob],name,{type:blob.type});
+  try{if(navigator.canShare&&navigator.canShare({files:[f]})&&matchMedia('(pointer:coarse)').matches){await navigator.share({files:[f],title:name});return}}catch(e){if(e&&e.name==='AbortError')return}
+  const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);toast('Saved to Downloads');
+}
+async function saveBackup(){
+  const data={app:'SickLog',version:APP_VERSION,created:new Date().toISOString(),settings:S,episodes:eps.map(({id,...e})=>e)};
+  await deliver(new Blob([JSON.stringify(data,null,1)],{type:'application/json'}),`sick-log-backup-${todayISO()}.json`);
+  await DB.put('kv',todayISO(),'lastBackup');
+}
+const validEp=e=>e&&/^\d{4}-\d\d-\d\d$/.test(e.start||'')&&(e.end===null||e.end===undefined||/^\d{4}-\d\d-\d\d$/.test(e.end))&&typeof e.type==='string';
+const cleanEp=e=>({start:e.start,end:e.end||null,type:String(e.type).slice(0,80),symptoms:Array.isArray(e.symptoms)?e.symptoms.map(s=>String(s).slice(0,80)):[],severity:[1,2,3].includes(e.severity)?e.severity:2,off:Number(e.off)>=0?Math.round(Number(e.off)):0,doctor:!!e.doctor,meds:String(e.meds||''),notes:String(e.notes||'')});
+async function loadBackup(file){
+  let data;try{data=JSON.parse(await file.text())}catch(e){await tell('This file could not be read. Choose a Sick Log backup file (.json).');return}
+  if(!data||data.app!=='SickLog'||!Array.isArray(data.episodes)){await tell('This is not a Sick Log backup file.');return}
+  const inc=data.episodes.filter(validEp).map(cleanEp);
+  const r=await dlg({text:`Backup from ${dmy(String(data.created||'').slice(0,10))||'unknown date'} with ${plural(inc.length,'episode')}.\n\nReplace: everything on this phone is removed first.\nMerge: episodes you don’t have yet are added.`,ok:'Replace',extra:'Merge',danger:true});
+  if(!r)return;
+  if(r===true){if(!await askYes(`Really remove the ${plural(eps.length,'episode')} on this phone and load the backup?`,'Replace',true))return;
+    await DB.clear('episodes');for(const e of inc)await DB.put('episodes',e);
+    const s=data.settings||{};if(Array.isArray(s.types))S.types=s.types.map(String);if(Array.isArray(s.symptoms))S.symptoms=s.symptoms.map(String);if(THEMES[s.theme])S.theme=s.theme;if(['system','light','dark'].includes(s.mode))S.mode=s.mode;
+  }else{
+    const key=e=>[e.start,e.end||'',e.type].join('|'),have=new Set(eps.map(key));let a=0;
+    for(const e of inc)if(!have.has(key(e))){if(!e.end&&ongoing())e.end=e.start;await DB.put('episodes',e);have.add(key(e));a++}
+    for(const e of inc){if(!S.types.includes(e.type))S.types.push(e.type);e.symptoms.forEach(s=>{if(!S.symptoms.includes(s))S.symptoms.push(s)})}
+    toast(`${plural(a,'episode')} added`);
+  }
+  await saveSettings();await loadEps();applyTheme();render();
+}
+async function exportCsv(){
+  if(!eps.length){toast('Nothing to export yet');return}
+  const c=v=>{let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return /[",;\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+  const rows=[['Start','End','Days','Type','Severity','Symptoms','Days off work','Doctor','Medication','Notes']];
+  [...eps].reverse().forEach(e=>rows.push([e.start,e.end||'',epLen(e),e.type,sevName(e.severity),(e.symptoms||[]).join('; '),e.off||0,e.doctor?'yes':'no',e.meds||'',e.notes||'']));
+  await deliver(new Blob(['﻿'+rows.map(r=>r.map(c).join(',')).join('\r\n')],{type:'text/csv'}),`sick-log-${todayISO()}.csv`);
+}
+
+/* ---------- version, changelog, license ---------- */
+const APP_VERSION='1.00';
+const CHANGELOG=[{"v":"1.00","d":"2026-11-14","n":["First version: log each sickness with first and last sick day, type, symptoms, severity, days off work, doctor visit, medication and notes","“I’m sick” starts an open sickness from today; “I’m well again” closes it","History with search and type filter, statistics per year, month, type and symptom, and a calendar with one year at a glance","Your own lists of sickness types and symptoms, colour themes, light and dark mode","Backup file to save and restore everything, CSV export for spreadsheets","Everything is stored on the phone only"]}];
+const LICENSE_TEXT="Sick Log\nCopyright (C) 2026 the Sick Log authors\n\nThis program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.\n\nThis program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.\n\nYou should have received a copy of the GNU General Public License along with this program (see the LICENSE file in the repository). If not, see https://www.gnu.org/licenses/gpl-3.0.html\n\nThe app shell is derived from Receipt Archive (GPL-3.0).\n\nThird-party software included:\nTabler Icons (https://github.com/tabler/tabler-icons), MIT License, Copyright (c) 2020-2024 Paweł Kuna.";
+const verArr=v=>String(v).split('.').map(n=>parseInt(n)||0);
+const verGt=(a,b)=>{const x=verArr(a),y=verArr(b);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return(x[i]||0)>(y[i]||0)}return false};
+const logHtml=items=>items.map(c=>`<div style="margin-bottom:14px"><b>${esc(c.v)}</b> <span class="sub">· ${esc(c.d||'')}</span><ul style="margin:6px 0 0;padding-left:20px">${(c.n||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('');
+async function whatsNew(isFirstRun){
+  const seen=await DB.get('kv','seenVersion');
+  if(seen===APP_VERSION)return;
+  await DB.put('kv',APP_VERSION,'seenVersion');
+  if(isFirstRun||!seen)return;
+  const items=CHANGELOG.filter(c=>verGt(c.v,seen)).slice(0,3);
+  if(!items.length)return;
+  const sh=openSheet(`<h3>Updated to version ${esc(APP_VERSION)}</h3><div style="max-height:55vh;overflow:auto;margin-bottom:12px">${logHtml(items)}</div><button class="btn primary block" id="wx">Got it</button>`);
+  sh.querySelector('#wx').onclick=()=>sh.close();
+}
+function openChangelog(){const sh=openSheet('<h3>Changelog</h3>'+logHtml(CHANGELOG)+'<button class="btn block" id="cx">Close</button>');sh.querySelector('#cx').onclick=()=>sh.close()}
+function openLicense(){
+  const t=document.createElement('pre');t.style.cssText='white-space:pre-wrap;font:12px/1.45 system-ui;margin:0 0 12px';t.textContent=LICENSE_TEXT;
+  const sh=openSheet('<h3>License</h3><div id="lt"></div><button class="btn block" id="lx">Close</button>');sh.querySelector('#lt').append(t);sh.querySelector('#lx').onclick=()=>sh.close();
+}
+function showWelcome(){
+  const bg=document.createElement('div');bg.className='wel-bg';
+  bg.innerHTML=`<div class="wel"><div class="ab-icon">${iconSvg()}</div><h2>Welcome to Sick Log</h2><ul>
+   <li>${ic('thermo')}<span>Tap <b>I’m sick</b> on the first day, <b>I’m well again</b> when it’s over</span></li>
+   <li>${ic('plus')}<span>Add earlier sicknesses with their dates</span></li>
+   <li>${ic('chart')}<span>See how often and when you are sick, year after year</span></li>
+   <li>${ic('lock')}<span>Everything stays on this phone. Save a backup now and then</span></li></ul>
+   <button class="btn primary block" id="wOk">Start</button></div>`;
+  document.body.append(bg);bg.querySelector('#wOk').onclick=()=>bg.remove();
+}
+
+/* ---------- install ---------- */
+let deferredPrompt=null;
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;updateInstall()});
+addEventListener('appinstalled',()=>{deferredPrompt=null;toast('Installed');updateInstall()});
+function updateInstall(){const b=$('#instBtn'),i=$('#instInfo');if(!b)return;
+  if(isStandalone()){b.style.display='none';i.innerHTML=ic('check')+' Running as an installed app.';return}
+  b.style.display='';i.textContent=deferredPrompt?'Install Sick Log for one-tap access, full screen and offline start.':'Adds Sick Log to your home screen.'}
+function bindInstall(){updateInstall();const b=$('#instBtn');if(!b)return;
+  b.onclick=async()=>{
+    if(deferredPrompt){deferredPrompt.prompt();try{await deferredPrompt.userChoice}catch(e){}deferredPrompt=null;updateInstall();return}
+    const s=openSheet(`<h3>Install Sick Log</h3><p><b>Android (Chrome):</b> tap the ⋮ menu → <b>Install app</b> (or <b>Add to Home screen</b>).</p>
+      <p><b>iPhone (Safari):</b> tap Share → <b>Add to Home Screen</b>.</p>
+      <p class="sub">The one-tap install only appears when the app is opened from its web address (https://…), not from a downloaded file, and in a regular (not private) Chrome tab.</p>
+      <button class="btn block" id="x">Close</button>`);s.querySelector('#x').onclick=()=>s.close()}}
+function setupPwa(){if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{})}
+
+/* ---------- update check (online only) ---------- */
+function openUpdate(){
+  if(!upd)return;
+  const items=(upd.notes||[]).filter(c=>verGt(c.v,APP_VERSION)).slice(0,5);
+  const sh=openSheet(`<h3>New version ${esc(upd.version)} available</h3><div class="sub" style="margin-bottom:10px">You have ${esc(APP_VERSION)}. Your data stays on this phone.</div><div style="max-height:46vh;overflow:auto;margin-bottom:12px">${logHtml(items)||'<div class="sub">Improvements and fixes.</div>'}</div><button class="btn primary block" id="upGo">Update now</button><div style="height:10px"></div><button class="btn block" id="upLater">Later</button>`);
+  sh.querySelector('#upLater').onclick=()=>sh.close();
+  sh.querySelector('#upGo').onclick=async e=>{
+    e.target.disabled=true;e.target.textContent='Updating…';
+    try{await fetch('index.html',{cache:'reload'});await fetch('sw.js',{cache:'reload'});const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg)await reg.update()}catch(err){}
+    location.reload();
+  };
+}
+async function checkUpdate(boot){
+  if(!navigator.onLine||!/^https?:/.test(location.protocol))return;
+  try{
+    const r=await fetch('version.json?'+Date.now(),{cache:'no-store'});if(!r.ok)return;
+    const j=await r.json();
+    if(j&&j.version&&verGt(j.version,APP_VERSION)){const was=upd&&upd.version;upd=j;if(was!==j.version)render();if(boot)openUpdate()}
+    else if(upd){upd=null;render()}
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){checkUpdate(false);if(view==='home')render()}});
+addEventListener('online',()=>checkUpdate(false));
+
+/* ---------- boot ---------- */
+$('#spv').textContent='Version '+APP_VERSION;
+setTimeout(()=>{const sp=$('#splash');if(sp){sp.classList.add('out');setTimeout(()=>sp.remove(),300)}},800);
+(async()=>{
+  setupPwa();
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+  await DB.open();await loadAll();applyTheme();
+  history.replaceState({v:'home',s:null},'');
+  const first=!eps.length&&!(await DB.get('kv','seen'));if(first)await DB.put('kv',1,'seen');
+  await render();
+  if(first)setTimeout(showWelcome,900);
+  whatsNew(first);
+  setTimeout(()=>checkUpdate(true),1500);
+})();
+</script>
+</body>
+</html>

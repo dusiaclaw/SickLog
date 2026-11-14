@@ -1,0 +1,17 @@
+{
+ "version": "1.00",
+ "notes": [
+  {
+   "v": "1.00",
+   "d": "2026-11-14",
+   "n": [
+    "First version: log each sickness with first and last sick day, type, symptoms, severity, days off work, doctor visit, medication and notes",
+    "“I’m sick” starts an open sickness from today; “I’m well again” closes it",
+    "History with search and type filter, statistics per year, month, type and symptom, and a calendar with one year at a glance",
+    "Your own lists of sickness types and symptoms, colour themes, light and dark mode",
+    "Backup file to save and restore everything, CSV export for spreadsheets",
+    "Everything is stored on the phone only"
+   ]
+  }
+ ]
+}
