@@ -1,6 +1,17 @@
 {
- "version": "1.01",
+ "version": "1.02",
  "notes": [
+  {
+   "v": "1.02",
+   "d": "2026-11-18",
+   "n": [
+    "Day reports: for every day of a sickness, a short wizard asks about fever (highest temperature and when), how yesterday’s symptoms changed (gone, better, same, worse) and new ones, how you felt, energy and sleep, medication, work, bed rest, doctor and notes",
+    "Each sickness has its own page with the details, a fever chart and all day reports. Tap a sickness in History or Calendar to open it",
+    "Home shows “How was today?” while you are sick",
+    "Day reports update the sickness: new symptoms are added, “Off sick” days fill in Days off work, a doctor visit and medication are carried over",
+    "Day reports are included in backups and in the CSV export"
+   ]
+  },
   {
    "v": "1.01",
    "d": "2026-11-14",

@@ -4,8 +4,9 @@ Installable web app (Android and iPhone) to keep a private diary of your sick da
 
 **Privacy:** everything stays in the browser storage of your own device. There is no server and no tracking. The only online request is the app checking its own address for a newer version.
 
-## Features (1.01)
+## Features (1.02)
 - **Log:** "I'm sick" opens a sickness from today, "I'm well again" closes it; earlier sicknesses can be added with their dates.
+- **Day reports:** for each day of a sickness, a short wizard asks about fever, symptom changes (gone, better, same, worse, new), how you felt, energy, sleep, medication, work, bed rest and doctor; reports update the sickness and show on its own page with a fever chart.
 - **History:** all episodes by year, with search and type filter.
 - **Statistics:** episodes and sick days per year, per month (seasonality), by type, symptom and severity, days off work, doctor visits, healthy stretches.
 - **Calendar:** one year at a glance, coloured by severity.
