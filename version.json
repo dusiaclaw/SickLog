@@ -1,6 +1,13 @@
 {
- "version": "1.02",
+ "version": "1.03",
  "notes": [
+  {
+   "v": "1.03",
+   "d": "2026-11-18",
+   "n": [
+    "Home fits on one screen without scrolling: the main button on top, the other options as tiles in two columns"
+   ]
+  },
   {
    "v": "1.02",
    "d": "2026-11-18",

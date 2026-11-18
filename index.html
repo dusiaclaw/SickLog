@@ -135,6 +135,18 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute
 .chk{display:flex;gap:10px;align-items:center;font-size:15px;margin-bottom:12px}.chk input{width:22px;height:22px;flex:none}
 .wel-bg{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:20px}.wel{background:var(--bg);border-radius:20px;padding:22px 20px;max-width:420px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.4)}.wel .ab-icon{width:72px;height:72px;margin:0 auto 10px}.wel h2{text-transform:none;letter-spacing:0;margin:0 0 12px;text-align:center;font-size:22px;color:var(--ink)}.wel ul{list-style:none;margin:0 0 16px;padding:0}.wel li{display:flex;gap:12px;align-items:center;padding:8px 0;font-size:16px}.wel li .ic{width:24px;height:24px;color:var(--accent);flex:none;margin:0}
 input.bad{outline:2px solid var(--danger)}
+#app.homepg{padding-bottom:0}
+.home{display:flex;flex-direction:column;gap:12px;height:calc(100vh - var(--abh,62px));height:calc(100dvh - var(--abh,62px));padding:14px 0 calc(14px + env(safe-area-inset-bottom))}
+.home .homebtn{margin:0;flex:none;padding:20px 18px}
+.hgrid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(2,minmax(0,1fr));gap:12px}
+.hgrid.six{grid-template-rows:repeat(3,minmax(0,1fr))}
+.tile{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:4px;min-height:0;overflow:hidden;border-radius:18px;padding:12px 14px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow);color:var(--ink);text-align:left;cursor:pointer}
+.tile .ic{width:28px;height:28px;color:var(--accent);margin-bottom:2px;flex:none}
+.tile b{font-size:17px;line-height:1.2}
+.tile .sub{font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile.soft{background:var(--accent-soft);border-color:transparent}
+.tile:active,.homebtn:active{filter:brightness(.96)}
+@media (max-height:600px){.home .homebtn{padding:14px 16px}.tile .ic{width:22px;height:22px}.tile b{font-size:15px}.tile .sub{-webkit-line-clamp:1}}
 .wz-dots{display:flex;gap:6px;margin:0 0 10px}.wz-dots i{flex:1;height:4px;border-radius:2px;background:var(--line)}.wz-dots i.on{background:var(--accent)}
 .wstep{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .wq{font-weight:700;font-size:17px;margin:16px 0 8px}
@@ -274,6 +286,8 @@ const backHead=t=>`<div class="pagehead"><button class="back" id="backBtn" aria-
 async function render(){
   const body=view==='home'?homeView():view==='history'?historyView():view==='stats'?statsView():view==='calendar'?calendarView():view==='episode'?episodeView():settingsView();
   $('#app').innerHTML=appbar()+'<div class="page">'+body+'</div>';
+  $('#app').classList.toggle('homepg',view==='home');
+  document.documentElement.style.setProperty('--abh',$('.appbar').offsetHeight+'px');
   $('#burger').onclick=openDrawer;
   const ub=$('#updBtn');if(ub)ub.onclick=openUpdate;
   const bb=$('#backBtn');if(bb)bb.onclick=goBack;
@@ -309,17 +323,20 @@ function healthyLine(){
   const past=[...m.keys()].filter(d=>d<t).sort();if(!past.length)return'';
   return `Healthy for ${plural(diffDays(past[past.length-1],t),'day')}`;
 }
+const tile=(id,icon,title,sub,cls='')=>`<button class="tile ${cls}" id="${id}">${ic(icon)}<b>${title}</b><span class="sub">${sub}</span></button>`;
 function homeView(){
   const o=ongoing(),y=String(new Date().getFullYear());
-  return `<div class="pagehead"><h1>Home</h1></div>`+
-  (o?`<button class="homebtn main" id="hEnd"><span class="hi">${ic('check')}</span><span class="ht"><b>I’m well again</b><span class="sub">${esc(o.type)} since ${dm(o.start)} · day ${epSpan(o)}</span></span></button>
-  <button class="homebtn" id="hRep"><span class="hi">${ic('doc')}</span><span class="ht"><b>${(o.days||{})[repDay(o)]?'Today’s report':'How was today?'}</b><span class="sub">${(o.days||{})[repDay(o)]?'Filled in · tap to change':'Day '+(epDays(o).indexOf(repDay(o))+1)+' · fever, symptoms, how you feel'}</span></span></button>
-  <button class="homebtn" id="hCur"><span class="hi">${ic('list')}</span><span class="ht"><b>Current sickness</b><span class="sub">Details and day-by-day reports</span></span></button>`
-  :`<button class="homebtn main" id="hAdd"><span class="hi">${ic('thermo')}</span><span class="ht"><b>I’m sick</b><span class="sub">Start logging from today</span></span></button>`)+
-  `<button class="homebtn" id="hPast"><span class="hi">${ic('plus')}</span><span class="ht"><b>Add past sickness</b><span class="sub">Enter an earlier episode</span></span></button>
-  <button class="homebtn" id="hHist"><span class="hi">${ic('list')}</span><span class="ht"><b>History</b><span class="sub">${plural(eps.length,'episode')} logged</span></span></button>
-  <button class="homebtn" id="hStats"><span class="hi">${ic('chart')}</span><span class="ht"><b>Statistics</b><span class="sub">${yearLine(y)}</span></span></button>
-  <button class="homebtn" id="hCal"><span class="hi">${ic('calendar')}</span><span class="ht"><b>Calendar</b><span class="sub">${healthyLine()}</span></span></button>`;
+  const rep=o&&(o.days||{})[repDay(o)];
+  return `<div class="home">`+
+  (o?`<button class="homebtn main" id="hEnd"><span class="hi">${ic('check')}</span><span class="ht"><b>I’m well again</b><span class="sub">${esc(o.type)} since ${dm(o.start)} · day ${epSpan(o)}</span></span></button>`
+   :`<button class="homebtn main" id="hAdd"><span class="hi">${ic('thermo')}</span><span class="ht"><b>I’m sick</b><span class="sub">Start logging from today</span></span></button>`)+
+  `<div class="hgrid${o?' six':''}">`+
+  (o?tile('hRep','doc',rep?'Today’s report':'How was today?',rep?'Filled in · tap to change':'Day '+(epDays(o).indexOf(repDay(o))+1)+' · fever, symptoms, feeling','soft')+
+     tile('hCur','thermo','Current sickness','Details and day reports'):'')+
+  tile('hPast','plus','Add past sickness','An earlier episode')+
+  tile('hHist','list','History',plural(eps.length,'episode')+' logged')+
+  tile('hStats','chart','Statistics',yearLine(y))+
+  tile('hCal','calendar','Calendar',healthyLine())+`</div></div>`;
 }
 function bindHome(){
   const o=ongoing();
@@ -779,8 +796,8 @@ async function exportCsv(){
 }
 
 /* ---------- version, changelog, license ---------- */
-const APP_VERSION='1.02';
-const CHANGELOG=[{"v":"1.02","d":"2026-11-18","n":["Day reports: for every day of a sickness, a short wizard asks about fever (highest temperature and when), how yesterday’s symptoms changed (gone, better, same, worse) and new ones, how you felt, energy and sleep, medication, work, bed rest, doctor and notes","Each sickness has its own page with the details, a fever chart and all day reports. Tap a sickness in History or Calendar to open it","Home shows “How was today?” while you are sick","Day reports update the sickness: new symptoms are added, “Off sick” days fill in Days off work, a doctor visit and medication are carried over","Day reports are included in backups and in the CSV export"]},{"v":"1.01","d":"2026-11-14","n":["Morning, afternoon or evening for the start and the end of a sickness","Sick days are now counted by thirds on the first and last day: Monday evening to Wednesday morning is 1.7 days. Sicknesses logged before count as full days, as they did"]},{"v":"1.00","d":"2026-11-14","n":["First version: log each sickness with first and last sick day, type, symptoms, severity, days off work, doctor visit, medication and notes","“I’m sick” starts an open sickness from today; “I’m well again” closes it","History with search and type filter, statistics per year, month, type and symptom, and a calendar with one year at a glance","Your own lists of sickness types and symptoms, colour themes, light and dark mode","Backup file to save and restore everything, CSV export for spreadsheets","Everything is stored on the phone only"]}];
+const APP_VERSION='1.03';
+const CHANGELOG=[{"v":"1.03","d":"2026-11-18","n":["Home fits on one screen without scrolling: the main button on top, the other options as tiles in two columns"]},{"v":"1.02","d":"2026-11-18","n":["Day reports: for every day of a sickness, a short wizard asks about fever (highest temperature and when), how yesterday’s symptoms changed (gone, better, same, worse) and new ones, how you felt, energy and sleep, medication, work, bed rest, doctor and notes","Each sickness has its own page with the details, a fever chart and all day reports. Tap a sickness in History or Calendar to open it","Home shows “How was today?” while you are sick","Day reports update the sickness: new symptoms are added, “Off sick” days fill in Days off work, a doctor visit and medication are carried over","Day reports are included in backups and in the CSV export"]},{"v":"1.01","d":"2026-11-14","n":["Morning, afternoon or evening for the start and the end of a sickness","Sick days are now counted by thirds on the first and last day: Monday evening to Wednesday morning is 1.7 days. Sicknesses logged before count as full days, as they did"]},{"v":"1.00","d":"2026-11-14","n":["First version: log each sickness with first and last sick day, type, symptoms, severity, days off work, doctor visit, medication and notes","“I’m sick” starts an open sickness from today; “I’m well again” closes it","History with search and type filter, statistics per year, month, type and symptom, and a calendar with one year at a glance","Your own lists of sickness types and symptoms, colour themes, light and dark mode","Backup file to save and restore everything, CSV export for spreadsheets","Everything is stored on the phone only"]}];
 const LICENSE_TEXT="Sick Log\nCopyright (C) 2026 the Sick Log authors\n\nThis program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.\n\nThis program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.\n\nYou should have received a copy of the GNU General Public License along with this program (see the LICENSE file in the repository). If not, see https://www.gnu.org/licenses/gpl-3.0.html\n\nThe app shell is derived from Receipt Archive (GPL-3.0).\n\nThird-party software included:\nTabler Icons (https://github.com/tabler/tabler-icons), MIT License, Copyright (c) 2020-2024 Paweł Kuna.";
 const verArr=v=>String(v).split('.').map(n=>parseInt(n)||0);
 const verGt=(a,b)=>{const x=verArr(a),y=verArr(b);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return(x[i]||0)>(y[i]||0)}return false};
