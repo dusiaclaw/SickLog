@@ -1,6 +1,15 @@
 {
- "version": "1.03",
+ "version": "1.04",
  "notes": [
+  {
+   "v": "1.04",
+   "d": "2026-11-19",
+   "n": [
+    "Cough: when Cough is ticked, choose whether it is dry, with mucus or both, in the sickness form and in each day report",
+    "Temperature readings: while you are sick, add a reading any time from the Temperature tile on Home (or the thermometer on the sickness page). Each reading keeps its time. The day report takes the day’s highest reading, and the sickness page lists all readings per day",
+    "The cough type is shown with the symptom (for example “Cough (with mucus)”), in the CSV export and in backups. Day reports update the sickness: a cough that was dry on one day and with mucus on another becomes “both”"
+   ]
+  },
   {
    "v": "1.03",
    "d": "2026-11-18",

@@ -154,8 +154,10 @@ input.bad{outline:2px solid var(--danger)}
 .symrow{padding:10px 0;border-bottom:1px solid var(--line)}.symrow:last-child{border:0}.symrow b{display:block;margin-bottom:6px}
 .seg.sm button{min-height:38px;font-size:14px}
 .dayrow{cursor:pointer}.dayrow .dh{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}.dayrow .dh .sub{flex:1}.dayrow .dh .ic{width:18px;height:18px;color:var(--muted);align-self:center}
-.dayrow.empty-day{box-shadow:none;background:transparent;border-style:dashed}.dayrow.empty-day .sub{color:var(--accent);font-weight:600}
-.fcols .vc .vb{height:90px}.fcols .vc .vb i{background:var(--s3)}
+.dayrow.empty-day{box-shadow:none;background:transparent;border-style:dashed}.dayrow.empty-day .addl{color:var(--accent);font-weight:600}
+.rdrow{display:grid;grid-template-columns:52px 1fr auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.rdrow:last-child{border:0}.rdrow span:first-child{color:var(--muted);font-size:14px}.rdrow .btn{min-height:32px;padding:0 8px}.rdrow .btn .ic{margin:0}
+.dayrow .sub .ic{width:15px;height:15px;vertical-align:-.15em}
+.fcols .vc .vb{height:90px}.fcols .vc .vb i{background:var(--s3)}.fcols .vc .vb i.nf{background:var(--muted);opacity:.5}
 </style>
 </head>
 <body>
@@ -323,6 +325,8 @@ function healthyLine(){
   const past=[...m.keys()].filter(d=>d<t).sort();if(!past.length)return'';
   return `Healthy for ${plural(diffDays(past[past.length-1],t),'day')}`;
 }
+const lastRead=o=>{const x=(o.temps||[]).slice().sort((a,b)=>a.t.localeCompare(b.t)).pop();
+  return x?`Last ${fmtT(x.v)}, ${x.t.slice(0,10)===todayISO()?'today':dm(x.t.slice(0,10))} ${x.t.slice(11)}`:'Add a reading'};
 const tile=(id,icon,title,sub,cls='')=>`<button class="tile ${cls}" id="${id}">${ic(icon)}<b>${title}</b><span class="sub">${sub}</span></button>`;
 function homeView(){
   const o=ongoing(),y=String(new Date().getFullYear());
@@ -332,17 +336,17 @@ function homeView(){
    :`<button class="homebtn main" id="hAdd"><span class="hi">${ic('thermo')}</span><span class="ht"><b>I’m sick</b><span class="sub">Start logging from today</span></span></button>`)+
   `<div class="hgrid${o?' six':''}">`+
   (o?tile('hRep','doc',rep?'Today’s report':'How was today?',rep?'Filled in · tap to change':'Day '+(epDays(o).indexOf(repDay(o))+1)+' · fever, symptoms, feeling','soft')+
-     tile('hCur','thermo','Current sickness','Details and day reports'):'')+
-  tile('hPast','plus','Add past sickness','An earlier episode')+
-  tile('hHist','list','History',plural(eps.length,'episode')+' logged')+
+     tile('hTemp','thermo','Temperature',lastRead(o))+
+     tile('hCur','list','Current sickness','Details and day reports'):tile('hPast','plus','Add past sickness','An earlier episode'))+
+  tile('hHist','history','History',plural(eps.length,'episode')+' logged')+
   tile('hStats','chart','Statistics',yearLine(y))+
   tile('hCal','calendar','Calendar',healthyLine())+`</div></div>`;
 }
 function bindHome(){
   const o=ongoing();
-  if(o){$('#hEnd').onclick=()=>endEpisode(o);$('#hCur').onclick=()=>nav('episode',o.id);$('#hRep').onclick=()=>openDayReport(o,repDay(o))}
+  if(o){$('#hEnd').onclick=()=>endEpisode(o);$('#hCur').onclick=()=>nav('episode',o.id);$('#hRep').onclick=()=>openDayReport(o,repDay(o));$('#hTemp').onclick=()=>openReading(o)}
   else $('#hAdd').onclick=()=>openEpisode(null,{now:true});
-  $('#hPast').onclick=()=>openEpisode(null);
+  const hp=$('#hPast');if(hp)hp.onclick=()=>openEpisode(null);
   $('#hHist').onclick=()=>nav('history');
   $('#hStats').onclick=()=>nav('stats');
   $('#hCal').onclick=()=>nav('calendar');
@@ -374,7 +378,7 @@ function openEpisode(ep,o={}){
    <label class="f" style="margin-bottom:6px">First sick day<input type="date" id="eS" value="${d.start}"></label><div class="seg" id="eSp" style="margin-bottom:12px"></div>
    <div id="eEw"><label class="f" style="margin-bottom:6px">Last sick day<input type="date" id="eE" value="${d.end||''}"></label><div class="seg" id="eEp" style="margin-bottom:12px"></div></div>
    <label class="chk"><input type="checkbox" id="eStill" ${still?'checked':''}> Still sick (no end date yet)</label>
-   <div class="flabel">Symptoms</div><div class="chips wrap" id="eSym"></div>
+   <div class="flabel">Symptoms</div><div class="chips wrap" id="eSym"></div><div id="eCoughW"></div>
    <div class="flabel">Severity</div><div class="seg" id="eSev" style="margin-bottom:12px"></div>
    <label class="f">Days off work<input type="number" inputmode="numeric" min="0" id="eOff" value="${d.off??''}" placeholder="0"></label><div class="hint" id="eLen"></div>
    <label class="chk"><input type="checkbox" id="eDoc" ${d.doctor?'checked':''}> Saw a doctor</label>
@@ -389,9 +393,12 @@ function openEpisode(ep,o={}){
     q('#eTypes').querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{d.type=b.dataset.t;dirty=true;drawTypes()});
     q('#eTypes [data-new]').onclick=async()=>{const n=(await askText('Name of the new type')||'').trim();if(!n)return;
       const ex=S.types.find(x=>x.toLowerCase()===n.toLowerCase());if(!ex){S.types.push(n);saveSettings()}d.type=ex||n;dirty=true;drawTypes()}};
-  const drawSym=()=>{const list=[...S.symptoms];d.symptoms.forEach(s=>{if(!list.includes(s))list.push(s)});
+  function drawCough(){const has=d.symptoms.some(isCough),w=q('#eCoughW');
+    w.innerHTML=has?coughSeg('eCough',d.cough,'<div class="flabel">Cough</div>'):'';w.style.marginBottom=has?'12px':'';
+    if(has)q('#eCough').querySelectorAll('button').forEach(b=>b.onclick=()=>{d.cough=b.dataset.v;dirty=true;drawCough()})}
+  const drawSym=()=>{drawCough();const list=[...S.symptoms];d.symptoms.forEach(s=>{if(!list.includes(s))list.push(s)});
     q('#eSym').innerHTML=list.map(n=>`<button type="button" class="chip ${d.symptoms.includes(n)?'on':''}" data-s="${esc(n)}">${esc(n)}</button>`).join('')+`<button type="button" class="chip add" data-new="1">${ic('plus')}New</button>`;
-    q('#eSym').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{const n=b.dataset.s,i=d.symptoms.indexOf(n);if(i<0)d.symptoms.push(n);else d.symptoms.splice(i,1);dirty=true;b.classList.toggle('on')});
+    q('#eSym').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{const n=b.dataset.s,i=d.symptoms.indexOf(n);if(i<0)d.symptoms.push(n);else d.symptoms.splice(i,1);dirty=true;b.classList.toggle('on');drawCough()});
     q('#eSym [data-new]').onclick=async()=>{const n=(await askText('Name of the new symptom')||'').trim();if(!n)return;
       const ex=S.symptoms.find(x=>x.toLowerCase()===n.toLowerCase());if(!ex){S.symptoms.push(n);saveSettings()}const nm=ex||n;if(!d.symptoms.includes(nm))d.symptoms.push(nm);dirty=true;drawSym()}};
   const drawSev=()=>{q('#eSev').innerHTML=SEV.map(([k,n])=>`<button type="button" data-v="${k}" class="${d.severity===k?'on':''}">${n}</button>`).join('');
@@ -414,9 +421,12 @@ function openEpisode(ep,o={}){
     const other=eps.find(x=>!x.end&&(!ep||x.id!==ep.id));
     if(still&&other){await tell(`“${other.type}” from ${dmy(other.start)} is still open. Give that one an end date first.`);return}
     const off=parseInt(q('#eOff').value);
-    const rec={start:s,end:e,sPart:d.sPart,ePart:still?undefined:d.ePart,type:d.type,symptoms:S.symptoms.filter(x=>d.symptoms.includes(x)).concat(d.symptoms.filter(x=>!S.symptoms.includes(x))),severity:d.severity,off:off>=0?off:0,doctor:q('#eDoc').checked,meds:q('#eMeds').value.trim(),notes:q('#eNotes').value.trim()};
+    const rec={start:s,end:e,sPart:d.sPart,ePart:still?undefined:d.ePart,type:d.type,symptoms:S.symptoms.filter(x=>d.symptoms.includes(x)).concat(d.symptoms.filter(x=>!S.symptoms.includes(x))),severity:d.severity,off:off>=0?off:0,doctor:q('#eDoc').checked,meds:q('#eMeds').value.trim(),notes:q('#eNotes').value.trim(),cough:d.symptoms.some(isCough)&&COUGHK.includes(d.cough)?d.cough:undefined};
     if(ep){rec.id=ep.id;const cur=await DB.get('episodes',ep.id);
-      if(cur&&cur.days){const out=Object.keys(cur.days).filter(k=>k<s||k>(e||'9999-12-31'));
+      if(cur&&(cur.days||cur.temps)){cur.days=cur.days||{};cur.temps=cur.temps||[];const outside=k=>k<s||k>(e||'9999-12-31');
+        const out=Object.keys(cur.days).filter(outside),outT=cur.temps.filter(x=>outside(x.t.slice(0,10)));
+        if(outT.length&&!await askYes(`${plural(outT.length,'temperature reading')} ${outT.length===1?'falls':'fall'} outside the new dates and will be deleted.`,'Delete them',true))return;
+        rec.temps=cur.temps.filter(x=>!outside(x.t.slice(0,10)));
         if(out.length&&!await askYes(`${plural(out.length,'day report')} ${out.length===1?'falls':'fall'} outside the new dates and will be deleted.`,'Delete them',true))return;
         out.forEach(k=>delete cur.days[k]);rec.days=cur.days}
       if(cur&&cur.offSync!==undefined)rec.offSync=cur.offSync}
@@ -432,6 +442,12 @@ const LMH=['Low','Medium','Good'],SLEEP=['Bad','OK','Good'];
 const WORK={work:'Worked',off:'Off sick',free:'Free day'};
 const WORKK=['work','off','free'];
 const SYMST=[['gone','Gone'],['better','Better'],['same','Same'],['worse','Worse']];
+/* cough detail: dry, with mucus or both (for any symptom whose name contains "cough") */
+const COUGH={dry:'Dry',wet:'With mucus',both:'Both'},COUGHK=['dry','wet','both'];
+const isCough=n=>/cough/i.test(n);
+const coughTxt=v=>({dry:'dry',wet:'with mucus',both:'dry and with mucus'})[v]||'';
+const symLabel=(n,cv)=>isCough(n)&&COUGHK.includes(cv)?`${n} (${coughTxt(cv)})`:n;
+const coughSeg=(id,val,label)=>`${label}<div class="seg sm" id="${id}">${COUGHK.map(k=>`<button type="button" data-v="${k}" class="${val===k?'on':''}">${COUGH[k]}</button>`).join('')}</div>`;
 const fmtT=t=>Number(t).toFixed(1)+' °C';
 const epDays=e=>{const n=Math.min(epSpan(e),400),out=[];for(let i=0;i<n;i++)out.push(addDays(e.start,i));return out};
 const nReps=e=>Object.keys(e.days||{}).length;
@@ -450,12 +466,12 @@ function knownMeds(e){
 }
 function repLines(r){
   const a=[];
-  if(r.fever==='y')a.push(`Fever ${r.temp?fmtT(r.temp):''}${r.tPart!=null?' ('+FPARTS[r.tPart].toLowerCase()+')':''}`.replace('  ',' '));else if(r.fever==='n')a.push('No fever');
+  if(r.fever==='y')a.push(`Fever ${r.temp?fmtT(r.temp):''}${r.tPart!=null?' ('+FPARTS[r.tPart].toLowerCase()+')':''}`.replace('  ',' '));else if(r.fever==='n')a.push(r.temp?`No fever (highest ${fmtT(r.temp)})`:'No fever');
   if(r.feel)a.push(`felt ${FEEL[r.feel].toLowerCase()} (${r.feel}/5)`);
   if(r.energy!=null)a.push(`energy ${LMH[r.energy].toLowerCase()}`);
   if(r.sleep!=null)a.push(`sleep ${SLEEP[r.sleep].toLowerCase()}`);
   const g={};for(const[k,s]of Object.entries(r.sym||{}))(g[s]=g[s]||[]).push(k);
-  const l2=[['new','New'],['worse','Worse'],['better','Better'],['same','Same'],['gone','Gone']].filter(([k])=>g[k]).map(([k,n])=>`${n}: ${g[k].join(', ')}`).join(' · ');
+  const l2=[['new','New'],['worse','Worse'],['better','Better'],['same','Same'],['gone','Gone']].filter(([k])=>g[k]).map(([k,n])=>`${n}: ${g[k].map(x=>k==='gone'?x:symLabel(x,r.cough)).join(', ')}`).join(' · ');
   const b=[];if(r.work)b.push(WORK[r.work]);if(r.bed)b.push('in bed');if(r.doctor)b.push('saw a doctor');if((r.meds||[]).length)b.push(r.meds.join(', '));
   const l1=a.join(' · ');
   return[l1&&l1[0].toUpperCase()+l1.slice(1),l2,b.join(' · '),r.note||''].filter(Boolean);
@@ -468,6 +484,8 @@ function syncEp(e){
   const oc=rs.filter(r=>r.work==='off').length;
   e.off=(e.off||0)===(e.offSync||0)?oc:Math.max(e.off||0,oc);e.offSync=oc;
   if(rs.some(r=>r.doctor))e.doctor=true;
+  const cv=new Set(rs.map(r=>r.cough).filter(v=>COUGHK.includes(v)));
+  if(cv.size){if(COUGHK.includes(e.cough))cv.add(e.cough);e.cough=cv.has('both')||(cv.has('dry')&&cv.has('wet'))?'both':[...cv][0]}
   const have=String(e.meds||'').split(',').map(x=>x.trim().toLowerCase()),add=[];
   for(const r of rs)for(const m of r.meds||[])if(!have.includes(m.toLowerCase())&&!add.some(x=>x.toLowerCase()===m.toLowerCase()))add.push(m);
   if(add.length)e.meds=[e.meds,...add].filter(Boolean).join(', ');
@@ -480,6 +498,7 @@ function openDayReport(e,day){
   const n=epDays(e).indexOf(day)+1;
   const STEPS=['Fever','Symptoms','How you felt','Medication & activity','Notes'];
   let st=0,dirty=false,feverAuto=!old;
+  if(!old){const pc=Object.keys(e.days||{}).filter(d=>d<day&&e.days[d].cough).sort().pop();r.cough=pc?e.days[pc].cough:e.cough}
   const sh=openSheet(`<h3>Day ${n} · ${wdm(day)}${day===todayISO()?' (today)':''}</h3><div class="wz-dots" id="wd"></div><div class="wstep" id="wt"></div><div id="wb"></div>
    <div class="sbar"><button class="btn" id="wP">${ic('back')}Back</button><button class="btn primary" id="wN">Next</button></div>`);
   sh.isDirty=()=>dirty;
@@ -487,16 +506,21 @@ function openDayReport(e,day){
   const seg=(id,opts,val,cls='')=>`<div class="seg ${cls}" id="${id}">${opts.map(o=>`<button type="button" data-v="${esc(o[0])}" class="${val!=null&&String(val)===String(o[0])?'on':''}">${esc(o[1])}</button>`).join('')}</div>`;
   const onSeg=(id,fn)=>q('#'+id).querySelectorAll('button').forEach(b=>b.onclick=()=>{dirty=true;q('#'+id).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));fn(b.dataset.v)});
   const views=[
-   ()=>`<div class="wq">Did you have a fever?</div>${seg('fv',[['y','Yes'],['n','No'],['u','Not measured']],r.fever)}
+   ()=>{const rd=dayReads(e,day);if(rd.length){const p=peakOf(rd);
+      return `<div class="wq">Temperature readings</div><div class="card" style="margin:0 0 10px;padding:4px 14px">${rd.map(x=>`<div class="rdrow"><span>${x.t.slice(11)}</span><b>${fmtT(x.v)}</b>${x===p?'<span class="tag">highest</span>':'<span></span>'}<button type="button" class="btn small" data-rdel="${x.i}" aria-label="Delete">${ic('x')}</button></div>`).join('')}</div>
+      <button type="button" class="btn small block" id="rdAdd">${ic('plus')}Add reading</button>
+      <div class="hint" style="margin:10px 0 0">The highest reading, ${fmtT(p.v)} in the ${FPARTS[hourPart(Number(p.t.slice(11,13)))].toLowerCase()}, goes into this day report${p.v>=FEVER_AT?' as fever':`. Below ${FEVER_AT.toFixed(1)} °C counts as no fever`}.</div>`}
+      return `<div class="wq">Did you have a fever?</div>${seg('fv',[['y','Yes'],['n','No'],['u','Not measured']],r.fever)}
      <div id="fvx" style="${r.fever==='y'?'':'display:none'}"><div class="wq">Highest temperature</div>
      <div class="tstep"><button type="button" class="btn" id="tm" aria-label="Lower">−</button><b id="tv" title="Tap to type">${fmtT(r.temp||prevT||38)}</b><button type="button" class="btn" id="tp" aria-label="Higher">+</button></div>
      <div class="hint" style="margin:6px 0 0;text-align:center">Tap the number to type it</div>
-     <div class="wq">When was it highest?</div>${seg('tpt',FPARTS.map((x,i)=>[i,x]),r.tPart,'sm')}</div>`,
+     <div class="wq">When was it highest?</div>${seg('tpt',FPARTS.map((x,i)=>[i,x]),r.tPart,'sm')}</div>
+     <button type="button" class="btn small block" id="rdAdd" style="margin-top:16px">${ic('thermo')}Add a timed reading instead</button>`},
    ()=>{const tr=Object.keys(r.sym).filter(k=>r.sym[k]!=='new');
      const pool=[...S.symptoms];Object.keys(r.sym).forEach(k=>{if(!pool.includes(k))pool.push(k)});
      return(tr.length?`<div class="wq">${Object.keys(e.days||{}).some(d=>d<day)?'Compared with the day before, these symptoms are…':'How are these symptoms today?'}</div>`+
        tr.map(k=>`<div class="symrow"><b>${esc(k)}</b>${seg('ss'+tr.indexOf(k),SYMST,r.sym[k],'sm')}</div>`).join(''):'<div class="sub" style="margin-top:10px">No symptoms from before.</div>')+
-       `<div class="wq">New symptoms today?</div><div class="chips wrap" id="ns">${pool.filter(k=>!tr.includes(k)).map(k=>`<button type="button" class="chip ${r.sym[k]==='new'?'on':''}" data-s="${esc(k)}">${esc(k)}</button>`).join('')}<button type="button" class="chip add" id="nsAdd">${ic('plus')}New</button></div>`},
+       `<div class="wq">New symptoms today?</div><div class="chips wrap" id="ns">${pool.filter(k=>!tr.includes(k)).map(k=>`<button type="button" class="chip ${r.sym[k]==='new'?'on':''}" data-s="${esc(k)}">${esc(k)}</button>`).join('')}<button type="button" class="chip add" id="nsAdd">${ic('plus')}New</button></div><div id="cw"></div>`},
    ()=>`<div class="wq">How did you feel overall?</div>${seg('fl',[1,2,3,4,5].map(i=>[i,i]),r.feel)}<div class="hint" id="flt" style="margin:6px 0 0;text-align:center">${r.feel?FEEL[r.feel]:'1 = very bad · 5 = almost well'}</div>
      <div class="wq">Energy</div>${seg('en',LMH.map((x,i)=>[i,x]),r.energy)}
      <div class="wq">Sleep last night</div>${seg('sl',SLEEP.map((x,i)=>[i,x]),r.sleep)}`,
@@ -508,13 +532,16 @@ function openDayReport(e,day){
      <div class="wq">Summary</div><div class="card" id="sum" style="margin:0 0 12px"></div>${old?`<button class="btn small danger block" id="wDel">${ic('trash')}Delete this day report</button>`:''}`
   ];
   const binds=[
-   ()=>{onSeg('fv',v=>{r.fever=v;q('#fvx').style.display=v==='y'?'':'none';if(v==='y'&&!r.temp)r.temp=prevT||38});
+   ()=>{const ra=q('#rdAdd');if(ra)ra.onclick=()=>openReading(e,day,()=>{applyReads();draw();render()});
+     sh.querySelectorAll('[data-rdel]').forEach(b=>b.onclick=async()=>{if(await deleteReading(e,Number(b.dataset.rdel))){if(!dayReads(e,day).length){delete r.fever;delete r.temp;delete r.tPart}applyReads();draw();render()}});
+     if(!q('#fv'))return;
+     onSeg('fv',v=>{r.fever=v;q('#fvx').style.display=v==='y'?'':'none';if(v==='y'&&!r.temp)r.temp=prevT||38});
      const setT=t=>{t=Math.round(Math.min(43,Math.max(35,t))*10)/10;r.temp=t;q('#tv').textContent=fmtT(t);dirty=true};
      q('#tm').onclick=()=>setT((r.temp||prevT||38)-.1);q('#tp').onclick=()=>setT((r.temp||prevT||38)+.1);
      q('#tv').onclick=async()=>{const v=await askText('Highest temperature (°C)',String(r.temp||prevT||38));const t=parseFloat(String(v||'').replace(',','.'));if(t>=35&&t<=43)setT(t);else if(v)toast('Enter a temperature between 35 and 43 °C')};
      onSeg('tpt',v=>r.tPart=Number(v))},
-   ()=>{Object.keys(r.sym).filter(k=>r.sym[k]!=='new').forEach((k,i)=>onSeg('ss'+i,v=>r.sym[k]=v));
-     q('#ns').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{const k=b.dataset.s;dirty=true;if(r.sym[k]==='new'){delete r.sym[k];b.classList.remove('on')}else{r.sym[k]='new';b.classList.add('on')}});
+   ()=>{Object.keys(r.sym).filter(k=>r.sym[k]!=='new').forEach((k,i)=>onSeg('ss'+i,v=>{r.sym[k]=v;drawCw()}));
+     q('#ns').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{const k=b.dataset.s;dirty=true;if(r.sym[k]==='new'){delete r.sym[k];b.classList.remove('on')}else{r.sym[k]='new';b.classList.add('on')}drawCw()});drawCw();
      q('#nsAdd').onclick=async()=>{const v=(await askText('Name of the new symptom')||'').trim();if(!v)return;
        const ex=S.symptoms.find(x=>x.toLowerCase()===v.toLowerCase());if(!ex){S.symptoms.push(v);saveSettings()}const k=ex||v;if(!(k in r.sym))r.sym[k]='new';dirty=true;draw()}},
    ()=>{onSeg('fl',v=>{r.feel=Number(v);q('#flt').textContent=FEEL[r.feel]});onSeg('en',v=>r.energy=Number(v));onSeg('sl',v=>r.sleep=Number(v))},
@@ -529,6 +556,11 @@ function openDayReport(e,day){
   const feverHint=()=>{if(!feverAuto||!S.symptoms.concat(Object.keys(r.sym)).includes('Fever'))return;feverAuto=false;
     if(r.fever==='n'&&r.sym.Fever&&r.sym.Fever!=='new')r.sym.Fever='gone';
     if(r.fever==='y'&&!('Fever' in r.sym))r.sym.Fever='new'};
+  const applyReads=()=>{const f=repFor({...e,days:{}},day);if(f&&f.nRead){r.fever=f.fever;r.temp=f.temp;r.tPart=f.tPart}};applyReads();
+  const hasCough=x=>Object.keys(x.sym||{}).some(k=>isCough(k)&&x.sym[k]!=='gone');
+  const drawCw=()=>{const w=q('#cw');if(!w)return;const has=hasCough(r);
+    w.innerHTML=has?coughSeg('wc',r.cough,'<div class="wq">Your cough today</div>'):'';
+    if(has)q('#wc').querySelectorAll('button').forEach(b=>b.onclick=()=>{r.cough=b.dataset.v;dirty=true;drawCw()})};
   const draw=()=>{
     if(st===1)feverHint();
     q('#wd').innerHTML=STEPS.map((x,i)=>`<i class="${i<=st?'on':''}"></i>`).join('');
@@ -539,10 +571,52 @@ function openDayReport(e,day){
   q('#wP').onclick=()=>{if(st>0){st--;draw()}};
   q('#wN').onclick=async()=>{
     if(st<STEPS.length-1){st++;draw();return}
-    const c={...r};if(c.fever!=='y'){delete c.temp;delete c.tPart}
+    applyReads();const c={...r};if(c.fever==='u'||(c.fever!=='y'&&!dayReads(e,day).length)){delete c.temp;delete c.tPart}if(!hasCough(c)||!COUGHK.includes(c.cough))delete c.cough;
     for(const k of Object.keys(c))if(c[k]===undefined||c[k]===''||(Array.isArray(c[k])&&!c[k].length))delete c[k];
     e.days=e.days||{};e.days[day]=c;syncEp(e);await DB.put('episodes',e);await loadEps();sh.close();toast('Day report saved');render()};
   draw();
+}
+
+/* ---------- temperature readings (any number per day while sick; the day's highest goes into its day report) ---------- */
+const FEVER_AT=37.5;
+const hourPart=h=>h<6?3:h<12?0:h<18?1:h<22?2:3;
+const nowLocal=()=>{const n=new Date();return `${isoOf(n)}T${pad(n.getHours())}:${pad(n.getMinutes())}`};
+const dayReads=(e,day)=>(e.temps||[]).map((x,i)=>({...x,i})).filter(x=>x.t.startsWith(day)).sort((a,b)=>a.t.localeCompare(b.t));
+function peakOf(rd){return rd.reduce((m,x)=>!m||x.v>m.v?x:m,null)}
+/* the day report as shown: the saved report, with fever taken from that day's readings when there are any */
+function repFor(e,day){
+  const saved=(e.days||{})[day],rd=dayReads(e,day);
+  if(!saved&&!rd.length)return null;
+  const r={...(saved||{})};
+  if(rd.length){const p=peakOf(rd);r.fever=p.v>=FEVER_AT?'y':'n';r.temp=p.v;r.tPart=hourPart(Number(p.t.slice(11,13)));r.nRead=rd.length}
+  return r;
+}
+const readLine=rd=>rd.map(x=>`${x.t.slice(11)} ${x.v.toFixed(1)}`).join(' · ')+' °C';
+function openReading(e,day,after){
+  const t=todayISO(),last=(e.temps||[]).slice().sort((a,b)=>a.t.localeCompare(b.t)).pop();
+  const maxT=e.end&&e.end<t?`${e.end}T23:59`:nowLocal(),minT=`${e.start}T00:00`;
+  const def=day&&day!==t?`${day}T12:00`:nowLocal();
+  let v=last?last.v:38;
+  const sh=openSheet(`<h3>Temperature reading</h3><div class="sub" style="margin-bottom:14px">${esc(e.type)} · since ${dmy(e.start)}</div>
+   <div class="tstep"><button type="button" class="btn" id="rm" aria-label="Lower">−</button><b id="rv">${fmtT(v)}</b><button type="button" class="btn" id="rp" aria-label="Higher">+</button></div>
+   <div class="hint" style="margin:6px 0 16px;text-align:center">Tap the number to type it</div>
+   <label class="f">Time of the reading<input type="datetime-local" id="rt" value="${def}" min="${minT}" max="${maxT}"></label>
+   <div class="sbar"><button class="btn" id="rc">Cancel</button><button class="btn primary" id="rs">Save</button></div>`);
+  const q=s=>sh.querySelector(s);
+  const setV=x=>{v=Math.round(Math.min(43,Math.max(35,x))*10)/10;q('#rv').textContent=fmtT(v)};
+  q('#rm').onclick=()=>setV(v-.1);q('#rp').onclick=()=>setV(v+.1);
+  q('#rv').onclick=async()=>{const s=await askText('Temperature (°C)',v.toFixed(1));const x=parseFloat(String(s||'').replace(',','.'));if(x>=35&&x<=43)setV(x);else if(s)toast('Enter a temperature between 35 and 43 °C')};
+  q('#rc').onclick=()=>sh.close();
+  q('#rs').onclick=async()=>{
+    const tm=q('#rt').value.slice(0,16);
+    if(!/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(tm)||tm<minT||tm.slice(0,10)>maxT.slice(0,10)){q('#rt').classList.add('bad');toast('The time must be within this sickness');return}
+    e.temps=e.temps||[];e.temps.push({t:tm,v});e.temps.sort((a,b)=>a.t.localeCompare(b.t));
+    await DB.put('episodes',e);await loadEps();sh.close();toast(`${fmtT(v)} saved`);
+    if(after)after();else render()};
+}
+async function deleteReading(e,i){
+  const x=e.temps[i];if(!x||!await askYes(`Delete the reading ${fmtT(x.v)} at ${x.t.slice(11)} on ${dm(x.t.slice(0,10))}?`,'Delete',true))return false;
+  e.temps.splice(i,1);await DB.put('episodes',e);await loadEps();return true;
 }
 
 /* ---------- one sickness: details and day by day ---------- */
@@ -550,22 +624,25 @@ function episodeView(){
   const e=eps.find(x=>x.id===Number(sub));
   if(!e)return backHead('Sickness')+'<div class="empty">This sickness no longer exists.</div>';
   const all=epDays(e),t=todayISO(),days=all.filter(d=>d<=t||d===e.start).reverse();
-  let h=`<div class="pagehead"><button class="back" id="backBtn" aria-label="Back">${ic('back')}</button><h1>${esc(e.type)}</h1><button class="btn small" id="epEdit">${ic('pencil')}Edit</button></div>`+epCard(e);
-  const temps=all.map(d=>[d,(e.days||{})[d]]).map(([d,r])=>[d,r&&r.fever==='y'&&r.temp?r.temp:0]);
+  let h=`<div class="pagehead"><button class="back" id="backBtn" aria-label="Back">${ic('back')}</button><h1>${esc(e.type)}</h1>${e.end?'':`<button class="btn small" id="epTemp" aria-label="Add temperature reading">${ic('thermo')}</button>`}<button class="btn small" id="epEdit">${ic('pencil')}Edit</button></div>`+epCard(e);
+  const temps=all.map(d=>[d,repFor(e,d)]).map(([d,r])=>[d,r&&r.temp&&(r.fever==='y'||r.nRead)?r.temp:0]);
   if(temps.filter(x=>x[1]).length>1){
     const mx=Math.max(...temps.map(x=>x[1])),base=36.5;
-    h+=`<h2>Highest temperature per day</h2><div class="card"><div class="vcols fcols">${temps.map(([d,v],i)=>`<div class="vc"><span class="vv">${v?v.toFixed(1):''}</span><span class="vb"><i style="height:${v?Math.max(4,(v-base)/(Math.max(mx,38)-base)*100):0}%"></i></span><span class="vl">D${i+1}</span></div>`).join('')}</div></div>`;
+    h+=`<h2>Highest temperature per day</h2><div class="card"><div class="vcols fcols">${temps.map(([d,v],i)=>`<div class="vc"><span class="vv">${v?v.toFixed(1):''}</span><span class="vb"><i class="${v&&v<FEVER_AT?'nf':''}" style="height:${v?Math.max(4,(v-base)/(Math.max(mx,38)-base)*100):0}%"></i></span><span class="vl">D${i+1}</span></div>`).join('')}</div></div>`;
   }
   h+=`<h2>Day by day · ${nReps(e)} of ${days.length} filled in</h2>`;
-  h+=days.map(d=>{const r=(e.days||{})[d],i=all.indexOf(d)+1;
-    return `<div class="card dayrow${r?'':' empty-day'}" data-d="${d}"><div class="dh"><b>Day ${i}</b><span class="sub">${wdm(d)}${d===t?' · today':''}</span>${r?ic('pencil'):''}</div>
-      ${r?repLines(r).map((l,j)=>`<div class="${j?'sub':''}">${esc(l)}</div>`).join('')||'<div class="sub">Report saved without details.</div>':`<div class="sub">${ic('plus')} Add day report</div>`}</div>`}).join('');
+  h+=days.map(d=>{const saved=(e.days||{})[d],r=repFor(e,d),rd=dayReads(e,d),i=all.indexOf(d)+1;
+    return `<div class="card dayrow${saved?'':' empty-day'}" data-d="${d}"><div class="dh"><b>Day ${i}</b><span class="sub">${wdm(d)}${d===t?' · today':''}</span>${saved?ic('pencil'):''}</div>
+      ${r?repLines(r).map((l,j)=>`<div class="${j?'sub':''}">${esc(l)}</div>`).join(''):''}${rd.length?`<div class="sub">${ic('thermo')} ${esc(readLine(rd))}</div>`:''}
+      ${saved?(r&&repLines(r).length?'':'<div class="sub">Report saved without details.</div>'):`<div class="sub addl">${ic('plus')} Add day report</div>`}</div>`}).join('');
   if(all.length>=400)h+='<div class="sub">Only the first 400 days are listed.</div>';
+  if(e.end&&(e.temps||[]).length)h+=`<div class="sub" style="text-align:center;margin:4px 0 14px">${plural(e.temps.length,'temperature reading')}</div>`;
   return h;
 }
 function bindEpisode(){
   const e=eps.find(x=>x.id===Number(sub));if(!e)return;
   $('#epEdit').onclick=()=>openEpisode(e);
+  const ar=$('#epTemp');if(ar)ar.onclick=()=>openReading(e);
   const c=document.querySelector('.page .ep');if(c)c.onclick=()=>openEpisode(e);
   document.querySelectorAll('.dayrow').forEach(r=>r.onclick=()=>openDayReport(e,r.dataset.d));
 }
@@ -573,7 +650,7 @@ function bindEpisode(){
 /* ---------- history ---------- */
 function epCard(e){
   const n=epLen(e),sv=e.severity||0;
-  const bits=[];if((e.symptoms||[]).length)bits.push(esc(e.symptoms.join(', ')));
+  const bits=[];if((e.symptoms||[]).length)bits.push(esc(e.symptoms.map(x=>symLabel(x,e.cough)).join(', ')));
   const ex=[];if(e.off)ex.push(`${plural(e.off,'day')} off work`);if(e.doctor)ex.push('doctor');if(e.meds)ex.push(esc(e.meds));if(nReps(e))ex.push(plural(nReps(e),'day report'));
   return `<div class="card ep" data-id="${e.id}"><span class="bar sv${sv}"></span><div class="mid"><b>${esc(e.type)}</b>${sv?`<span class="tag sv${sv}">${sevName(sv)}</span>`:''}${e.end?'':'<span class="tag now">ongoing</span>'}
    <div class="sub">${e.end?(e.start===e.end?dmy(e.start)+(e.sPart===undefined?'':sP(e)===eP(e)?partTxt(e,'s'):`${partTxt(e,'s')} to${partTxt(e,'e')}`):`${e.start.slice(0,4)===e.end.slice(0,4)?dm(e.start):dmy(e.start)}${partTxt(e,'s')} – ${dmy(e.end)}${partTxt(e,'e')}`):`since ${dmy(e.start)}${partTxt(e,'s')}`}</div>
@@ -767,9 +844,9 @@ const validEp=e=>e&&/^\d{4}-\d\d-\d\d$/.test(e.start||'')&&(e.end===null||e.end=
 const cleanDays=d=>{const o={};if(d&&typeof d==='object')for(const[k,r]of Object.entries(d))if(/^\d{4}-\d\d-\d\d$/.test(k)&&r&&typeof r==='object'){const c={};
   if(['y','n','u'].includes(r.fever))c.fever=r.fever;if(Number(r.temp)>=30&&Number(r.temp)<=45)c.temp=Number(r.temp);if([0,1,2,3].includes(r.tPart))c.tPart=r.tPart;
   if(r.sym&&typeof r.sym==='object'){c.sym={};for(const[s,v]of Object.entries(r.sym))if(['new','gone','better','same','worse'].includes(v))c.sym[String(s).slice(0,80)]=v}
-  if([1,2,3,4,5].includes(r.feel))c.feel=r.feel;if([0,1,2].includes(r.energy))c.energy=r.energy;if([0,1,2].includes(r.sleep))c.sleep=r.sleep;
+  if(COUGHK.includes(r.cough))c.cough=r.cough;if([1,2,3,4,5].includes(r.feel))c.feel=r.feel;if([0,1,2].includes(r.energy))c.energy=r.energy;if([0,1,2].includes(r.sleep))c.sleep=r.sleep;
   if(Array.isArray(r.meds))c.meds=r.meds.map(x=>String(x).slice(0,80));if(WORKK.includes(r.work))c.work=r.work;if(r.bed)c.bed=true;if(r.doctor)c.doctor=true;if(r.note)c.note=String(r.note);o[k]=c}return o};
-const cleanEp=e=>({days:cleanDays(e.days),offSync:Number(e.offSync)>=0?Math.round(Number(e.offSync)):undefined,start:e.start,end:e.end||null,sPart:[0,1,2].includes(e.sPart)?e.sPart:undefined,ePart:e.end&&[0,1,2].includes(e.ePart)?e.ePart:undefined,type:String(e.type).slice(0,80),symptoms:Array.isArray(e.symptoms)?e.symptoms.map(s=>String(s).slice(0,80)):[],severity:[1,2,3].includes(e.severity)?e.severity:2,off:Number(e.off)>=0?Math.round(Number(e.off)):0,doctor:!!e.doctor,meds:String(e.meds||''),notes:String(e.notes||'')});
+const cleanEp=e=>({temps:Array.isArray(e.temps)?e.temps.filter(x=>x&&/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(x.t)&&Number(x.v)>=30&&Number(x.v)<=45).map(x=>({t:x.t,v:Number(x.v)})):[],days:cleanDays(e.days),cough:COUGHK.includes(e.cough)?e.cough:undefined,offSync:Number(e.offSync)>=0?Math.round(Number(e.offSync)):undefined,start:e.start,end:e.end||null,sPart:[0,1,2].includes(e.sPart)?e.sPart:undefined,ePart:e.end&&[0,1,2].includes(e.ePart)?e.ePart:undefined,type:String(e.type).slice(0,80),symptoms:Array.isArray(e.symptoms)?e.symptoms.map(s=>String(s).slice(0,80)):[],severity:[1,2,3].includes(e.severity)?e.severity:2,off:Number(e.off)>=0?Math.round(Number(e.off)):0,doctor:!!e.doctor,meds:String(e.meds||''),notes:String(e.notes||'')});
 async function loadBackup(file){
   let data;try{data=JSON.parse(await file.text())}catch(e){await tell('This file could not be read. Choose a Sick Log backup file (.json).');return}
   if(!data||data.app!=='SickLog'||!Array.isArray(data.episodes)){await tell('This is not a Sick Log backup file.');return}
@@ -790,14 +867,14 @@ async function loadBackup(file){
 async function exportCsv(){
   if(!eps.length){toast('Nothing to export yet');return}
   const c=v=>{let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return /[",;\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
-  const rows=[['Start','Start part','End','End part','Days','Type','Severity','Symptoms','Days off work','Doctor','Medication','Notes','Day reports']];
-  [...eps].reverse().forEach(e=>rows.push([e.start,PARTS[sP(e)],e.end||'',e.end?PARTS[eP(e)]:'',r1(epLen(e)),e.type,sevName(e.severity),(e.symptoms||[]).join('; '),e.off||0,e.doctor?'yes':'no',e.meds||'',e.notes||'',Object.keys(e.days||{}).sort().map(d=>`${d}: ${repLines(e.days[d]).join(' | ')}`).join(' // ')]));
+  const rows=[['Start','Start part','End','End part','Days','Type','Severity','Symptoms','Days off work','Doctor','Medication','Notes','Day reports','Temperature readings']];
+  [...eps].reverse().forEach(e=>rows.push([e.start,PARTS[sP(e)],e.end||'',e.end?PARTS[eP(e)]:'',r1(epLen(e)),e.type,sevName(e.severity),(e.symptoms||[]).map(x=>symLabel(x,e.cough)).join('; '),e.off||0,e.doctor?'yes':'no',e.meds||'',e.notes||'',[...new Set([...Object.keys(e.days||{}),...(e.temps||[]).map(x=>x.t.slice(0,10))])].sort().map(d=>`${d}: ${repLines(repFor(e,d)).join(' | ')}`).join(' // '),(e.temps||[]).map(x=>`${x.t.replace('T',' ')} ${x.v.toFixed(1)}`).join('; ')]));
   await deliver(new Blob(['﻿'+rows.map(r=>r.map(c).join(',')).join('\r\n')],{type:'text/csv'}),`sick-log-${todayISO()}.csv`);
 }
 
 /* ---------- version, changelog, license ---------- */
-const APP_VERSION='1.03';
-const CHANGELOG=[{"v":"1.03","d":"2026-11-18","n":["Home fits on one screen without scrolling: the main button on top, the other options as tiles in two columns"]},{"v":"1.02","d":"2026-11-18","n":["Day reports: for every day of a sickness, a short wizard asks about fever (highest temperature and when), how yesterday’s symptoms changed (gone, better, same, worse) and new ones, how you felt, energy and sleep, medication, work, bed rest, doctor and notes","Each sickness has its own page with the details, a fever chart and all day reports. Tap a sickness in History or Calendar to open it","Home shows “How was today?” while you are sick","Day reports update the sickness: new symptoms are added, “Off sick” days fill in Days off work, a doctor visit and medication are carried over","Day reports are included in backups and in the CSV export"]},{"v":"1.01","d":"2026-11-14","n":["Morning, afternoon or evening for the start and the end of a sickness","Sick days are now counted by thirds on the first and last day: Monday evening to Wednesday morning is 1.7 days. Sicknesses logged before count as full days, as they did"]},{"v":"1.00","d":"2026-11-14","n":["First version: log each sickness with first and last sick day, type, symptoms, severity, days off work, doctor visit, medication and notes","“I’m sick” starts an open sickness from today; “I’m well again” closes it","History with search and type filter, statistics per year, month, type and symptom, and a calendar with one year at a glance","Your own lists of sickness types and symptoms, colour themes, light and dark mode","Backup file to save and restore everything, CSV export for spreadsheets","Everything is stored on the phone only"]}];
+const APP_VERSION='1.04';
+const CHANGELOG=[{"v":"1.04","d":"2026-11-19","n":["Cough: when Cough is ticked, choose whether it is dry, with mucus or both, in the sickness form and in each day report","Temperature readings: while you are sick, add a reading any time from the Temperature tile on Home (or the thermometer on the sickness page). Each reading keeps its time. The day report takes the day’s highest reading, and the sickness page lists all readings per day","The cough type is shown with the symptom (for example “Cough (with mucus)”), in the CSV export and in backups. Day reports update the sickness: a cough that was dry on one day and with mucus on another becomes “both”"]},{"v":"1.03","d":"2026-11-18","n":["Home fits on one screen without scrolling: the main button on top, the other options as tiles in two columns"]},{"v":"1.02","d":"2026-11-18","n":["Day reports: for every day of a sickness, a short wizard asks about fever (highest temperature and when), how yesterday’s symptoms changed (gone, better, same, worse) and new ones, how you felt, energy and sleep, medication, work, bed rest, doctor and notes","Each sickness has its own page with the details, a fever chart and all day reports. Tap a sickness in History or Calendar to open it","Home shows “How was today?” while you are sick","Day reports update the sickness: new symptoms are added, “Off sick” days fill in Days off work, a doctor visit and medication are carried over","Day reports are included in backups and in the CSV export"]},{"v":"1.01","d":"2026-11-14","n":["Morning, afternoon or evening for the start and the end of a sickness","Sick days are now counted by thirds on the first and last day: Monday evening to Wednesday morning is 1.7 days. Sicknesses logged before count as full days, as they did"]},{"v":"1.00","d":"2026-11-14","n":["First version: log each sickness with first and last sick day, type, symptoms, severity, days off work, doctor visit, medication and notes","“I’m sick” starts an open sickness from today; “I’m well again” closes it","History with search and type filter, statistics per year, month, type and symptom, and a calendar with one year at a glance","Your own lists of sickness types and symptoms, colour themes, light and dark mode","Backup file to save and restore everything, CSV export for spreadsheets","Everything is stored on the phone only"]}];
 const LICENSE_TEXT="Sick Log\nCopyright (C) 2026 the Sick Log authors\n\nThis program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.\n\nThis program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.\n\nYou should have received a copy of the GNU General Public License along with this program (see the LICENSE file in the repository). If not, see https://www.gnu.org/licenses/gpl-3.0.html\n\nThe app shell is derived from Receipt Archive (GPL-3.0).\n\nThird-party software included:\nTabler Icons (https://github.com/tabler/tabler-icons), MIT License, Copyright (c) 2020-2024 Paweł Kuna.";
 const verArr=v=>String(v).split('.').map(n=>parseInt(n)||0);
 const verGt=(a,b)=>{const x=verArr(a),y=verArr(b);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return(x[i]||0)>(y[i]||0)}return false};
